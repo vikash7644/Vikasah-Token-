@@ -12,9 +12,9 @@ import {Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 /**
  * @title Vikasah Token
  * @notice Fixed-supply BEP-20/ERC-20 token for BNB Smart Chain.
- * @dev The full 1 billion token supply is minted once to initialReceiver.
- *      There is deliberately no owner mint function. Burns reduce totalSupply
- *      and do not authorize re-minting. Owner is a separate administrative role.
+ * @dev Mints 30% to the configured owner-allocation wallet and 70% to a
+ *      separate distribution reserve wallet exactly once at deployment.
+ *      There is no mint function; burns permanently reduce total supply.
  */
 contract VikasahToken is
     ERC20,
@@ -25,19 +25,34 @@ contract VikasahToken is
     Ownable2Step
 {
     uint256 public constant MAX_SUPPLY = 1_000_000_000 ether;
+    uint256 public constant OWNER_ALLOCATION = 300_000_000 ether;
+    uint256 public constant DISTRIBUTION_RESERVE = 700_000_000 ether;
 
     error ZeroAddress();
+    error DuplicateAllocationWallets();
 
-    constructor(address initialOwner, address initialReceiver)
+    constructor(
+        address initialOwner,
+        address ownerAllocationReceiver,
+        address distributionReceiver
+    )
         ERC20("Vikasah Token", "VKT")
         ERC20Capped(MAX_SUPPLY)
         ERC20Permit("Vikasah Token")
         Ownable(initialOwner)
     {
-        if (initialOwner == address(0) || initialReceiver == address(0)) {
-            revert ZeroAddress();
+        if (
+            initialOwner == address(0) ||
+            ownerAllocationReceiver == address(0) ||
+            distributionReceiver == address(0)
+        ) revert ZeroAddress();
+
+        if (ownerAllocationReceiver == distributionReceiver) {
+            revert DuplicateAllocationWallets();
         }
-        _mint(initialReceiver, MAX_SUPPLY);
+
+        _mint(ownerAllocationReceiver, OWNER_ALLOCATION);
+        _mint(distributionReceiver, DISTRIBUTION_RESERVE);
     }
 
     function pause() external onlyOwner {
