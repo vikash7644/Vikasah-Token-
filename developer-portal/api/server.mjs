@@ -22,14 +22,21 @@ db.exec(`
     payer_address TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'pending',
     transaction_hash TEXT UNIQUE,
+    block_number INTEGER,
+    block_hash TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   );
 `);
+const invoiceColumns = new Set(db.prepare("PRAGMA table_info(invoices)").all().map(column => column.name));
+if (!invoiceColumns.has("block_number")) db.exec("ALTER TABLE invoices ADD COLUMN block_number INTEGER");
+if (!invoiceColumns.has("block_hash")) db.exec("ALTER TABLE invoices ADD COLUMN block_hash TEXT");
 const insertInvoice = db.prepare("INSERT INTO invoices (id, amount_wei, payer_address) VALUES (?, ?, ?)");
 const getInvoice = db.prepare("SELECT * FROM invoices WHERE id = ?");
 const getByHash = db.prepare("SELECT * FROM invoices WHERE transaction_hash = ?");
-const markPaid = db.prepare("UPDATE invoices SET status='paid', transaction_hash=? WHERE id=? AND status='pending'");
-const settleInvoice = db.transaction((transactionHash, invoiceId) => {
+const markPaid = db.prepare("UPDATE invoices SET status='paid', transaction_hash=?, block_number=?, block_hash=? WHERE id=? AND status='pending'");
+const resetReorgedPayment = db.prepare("UPDATE invoices SET status='pending', transaction_hash=NULL, block_number=NULL, block_hash=NULL WHERE id=? AND status='paid' AND transaction_hash=?");
+const reconcileReorg = db.transaction((invoiceId, transactionHash) => resetReorgedPayment.run(invoiceId, transactionHash));
+const settleInvoice = db.transaction((transactionHash, invoiceId, blockNumber, blockHash) => {
   const invoice = getInvoice.get(invoiceId);
   if (!invoice) return { outcome: "missing" };
   if (invoice.status === "paid") {
@@ -39,7 +46,7 @@ const settleInvoice = db.transaction((transactionHash, invoiceId) => {
   }
   const existing = getByHash.get(transactionHash);
   if (existing) return { outcome: "hash_used", invoice: existing };
-  const changed = markPaid.run(transactionHash, invoiceId);
+  const changed = markPaid.run(transactionHash, blockNumber, blockHash, invoiceId);
   if (changed.changes !== 1) return { outcome: "conflict" };
   return { outcome: "paid" };
 });
@@ -76,16 +83,27 @@ app.post("/v1/payments/verify", async (req, res) => {
   if (typeof invoiceId !== "string" || typeof transactionHash !== "string" || !/^0x[a-fA-F0-9]{64}$/.test(transactionHash)) {
     return res.status(400).json({ error: "A valid invoiceId and transactionHash are required." });
   }
-  const invoice = getInvoice.get(invoiceId);
+  let invoice = getInvoice.get(invoiceId);
   if (!invoice) return res.status(404).json({ error: "Invoice not found." });
   try {
     const network = await provider.getNetwork();
     if (Number(network.chainId) !== 97) throw new Error("RPC endpoint is not BNB Smart Chain Testnet.");
     const code = await provider.getCode(tokenAddress);
     if (code === "0x") return res.status(503).json({ error: "Configured VKT contract has no code on testnet." });
+    if (invoice.status === "paid" && invoice.transaction_hash && invoice.block_number !== null && invoice.block_hash) {
+      const canonicalBlock = await provider.getBlock(invoice.block_number);
+      if (!canonicalBlock || canonicalBlock.hash?.toLowerCase() !== invoice.block_hash.toLowerCase()) {
+        reconcileReorg(invoiceId, invoice.transaction_hash);
+        invoice = getInvoice.get(invoiceId);
+      }
+    }
     const receipt = await provider.getTransactionReceipt(transactionHash);
     if (!receipt) return res.status(202).json({ status: "pending", message: "Transaction is not mined yet." });
     if (receipt.status !== 1) return res.status(422).json({ error: "Transaction failed on-chain." });
+    const canonicalBlock = await provider.getBlock(receipt.blockNumber);
+    if (!canonicalBlock || canonicalBlock.hash?.toLowerCase() !== receipt.blockHash?.toLowerCase()) {
+      return res.status(202).json({ status: "confirming", message: "Receipt block is not yet canonical; retry verification." });
+    }
     const head = await provider.getBlockNumber();
     if (head - receipt.blockNumber + 1 < minConfirmations) {
       return res.status(202).json({ status: "confirming", confirmations: head - receipt.blockNumber + 1, required: minConfirmations });
@@ -106,7 +124,7 @@ app.post("/v1/payments/verify", async (req, res) => {
       } catch { /* Ignore unrelated or malformed logs. */ }
     }
     if (!matched) return res.status(422).json({ error: "No matching VKT Transfer from the expected payer to the configured merchant for this invoice amount." });
-    const settlement = settleInvoice(transactionHash.toLowerCase(), invoiceId);
+    const settlement = settleInvoice(transactionHash.toLowerCase(), invoiceId, receipt.blockNumber, receipt.blockHash);
     if (settlement.outcome === "already_paid") {
       return res.json({ invoiceId, status: "paid", transactionHash: settlement.invoice.transaction_hash });
     }
