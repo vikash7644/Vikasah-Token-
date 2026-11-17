@@ -108,3 +108,28 @@ test("invoice creation accepts 18-decimal VKT amounts and rejects duplicate IDs"
   });
   assert.equal(duplicate.status, 409);
 });
+
+test("payment verification rejects malformed transaction hashes before RPC access", async () => {
+  const response = await fetch(`${baseUrl}/v1/payments/verify`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ invoiceId: "order-decimal-1", transactionHash: "not-a-transaction-hash" })
+  });
+  assert.equal(response.status, 400);
+  assert.deepEqual(await response.json(), {
+    error: "A valid invoiceId and transactionHash are required."
+  });
+});
+
+test("payment verification returns 404 for unknown invoices", async () => {
+  const response = await fetch(`${baseUrl}/v1/payments/verify`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      invoiceId: "unknown-invoice",
+      transactionHash: `0x${"a".repeat(64)}`
+    })
+  });
+  assert.equal(response.status, 404);
+  assert.deepEqual(await response.json(), { error: "Invoice not found." });
+});
