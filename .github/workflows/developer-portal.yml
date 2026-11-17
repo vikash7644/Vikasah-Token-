@@ -6,7 +6,7 @@ on:
       - "developer-portal/**"
       - ".github/workflows/developer-portal.yml"
   push:
-    branches: [main]
+    branches: ['**']
     paths:
       - "developer-portal/**"
       - ".github/workflows/developer-portal.yml"
