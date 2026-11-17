@@ -3,7 +3,7 @@ name: Build Android APK
 on:
   workflow_dispatch:
   pull_request:
-    branches: [main]
+    branches: [main, feat/merchant-studio-invoice-qr]
     paths:
       - "merchant-studio/**"
       - "capacitor.config.json"
