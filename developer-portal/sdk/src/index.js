@@ -52,3 +52,31 @@ export async function verifyVktPayment({ apiBaseUrl, invoiceId, transactionHash 
   if (!response.ok) throw new Error(data.error || "Payment verification failed.");
   return data;
 }
+
+
+const PASSPORT_ABI = [
+  "function positionOf(address account) view returns (uint256 amount, uint256 unlockAt)",
+  "function hasActivePassport(address account) view returns (bool)"
+];
+
+/** Reads a wallet's 180-day VKT Utility Passport status; does not move tokens. */
+export async function readVktUtilityPassport({ provider, passportAddress, account }) {
+  if (!provider) throw new Error("A connected wallet provider is required.");
+  if (!/^0x[a-fA-F0-9]{40}$/.test(passportAddress) || !/^0x[a-fA-F0-9]{40}$/.test(account)) {
+    throw new Error("A valid deployed passport address and wallet address are required.");
+  }
+  const network = await provider.getNetwork();
+  if (Number(network.chainId) !== BSC_TESTNET_CHAIN_ID) {
+    throw new Error("Switch to BNB Smart Chain Testnet (chain ID 97).");
+  }
+  const passport = new Contract(passportAddress, PASSPORT_ABI, provider);
+  const [position, active] = await Promise.all([
+    passport.positionOf(account),
+    passport.hasActivePassport(account)
+  ]);
+  return {
+    amount: position.amount,
+    unlockAt: Number(position.unlockAt),
+    active
+  };
+}
