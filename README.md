@@ -53,6 +53,18 @@ npm test
 - RPC: https://bsc-testnet-dataseed.bnbchain.org
 - Explorer: https://testnet.bscscan.com/
 
+### Utility Passport testnet deployment
+
+Only after the VKT token itself has been deployed and its address independently verified on BSC Testnet:
+
+1. Set `VKT_TOKEN_ADDRESS` in the ignored local `.env` file. Do not use a placeholder or an address copied from an unverified source.
+2. Confirm the deployer wallet is a dedicated test wallet with a small amount of testnet BNB for gas.
+3. Run `npm run deploy:passport:testnet`.
+4. Save the printed Passport address and verify its source on BscScan Testnet.
+5. Test approval, locking, the full 180-day expiry behavior on a test environment, and withdrawal before any app relies on Passport status.
+
+The script checks chain ID 97, token contract code, VKT name/symbol/decimals/supply, and the deployed Passport's linked token and lock duration. It does not deploy the VKT token, fund wallets, or transfer VKT. Deployment creates a public on-chain contract and is not run automatically by CI.
+
 ## Security and launch status
 
 This is a development/testnet starting point, not an audited or production-ready token. CI compilation and tests must pass before testnet deployment. Obtain an independent smart-contract audit, verify deployed source, confirm distribution/vesting wallets, and complete legal and operational reviews before mainnet launch. Testnet tokens have no monetary value. Token creation or exchange listing does not guarantee buyers, price appreciation, or profit.
