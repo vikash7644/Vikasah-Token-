@@ -29,6 +29,20 @@ const insertInvoice = db.prepare("INSERT INTO invoices (id, amount_wei, payer_ad
 const getInvoice = db.prepare("SELECT * FROM invoices WHERE id = ?");
 const getByHash = db.prepare("SELECT * FROM invoices WHERE transaction_hash = ?");
 const markPaid = db.prepare("UPDATE invoices SET status='paid', transaction_hash=? WHERE id=? AND status='pending'");
+const settleInvoice = db.transaction((transactionHash, invoiceId) => {
+  const invoice = getInvoice.get(invoiceId);
+  if (!invoice) return { outcome: "missing" };
+  if (invoice.status === "paid") {
+    return invoice.transaction_hash === transactionHash
+      ? { outcome: "already_paid", invoice }
+      : { outcome: "invoice_paid", invoice };
+  }
+  const existing = getByHash.get(transactionHash);
+  if (existing) return { outcome: "hash_used", invoice: existing };
+  const changed = markPaid.run(transactionHash, invoiceId);
+  if (changed.changes !== 1) return { outcome: "conflict" };
+  return { outcome: "paid" };
+});
 const iface = new Interface(["event Transfer(address indexed from, address indexed to, uint256 value)"]);
 const app = express();
 app.use(express.json({ limit: "16kb" }));
@@ -64,15 +78,6 @@ app.post("/v1/payments/verify", async (req, res) => {
   }
   const invoice = getInvoice.get(invoiceId);
   if (!invoice) return res.status(404).json({ error: "Invoice not found." });
-  if (invoice.status === "paid") {
-    if (invoice.transaction_hash !== transactionHash.toLowerCase()) {
-      return res.status(409).json({ error: "This invoice was already paid with a different transaction." });
-    }
-    return res.json({ invoiceId, status: "paid", transactionHash: invoice.transaction_hash });
-  }
-  const reused = getByHash.get(transactionHash.toLowerCase());
-  if (reused) return res.status(409).json({ error: "Transaction hash has already been assigned to an invoice." });
-
   try {
     const network = await provider.getNetwork();
     if (Number(network.chainId) !== 97) throw new Error("RPC endpoint is not BNB Smart Chain Testnet.");
@@ -101,10 +106,24 @@ app.post("/v1/payments/verify", async (req, res) => {
       } catch { /* Ignore unrelated or malformed logs. */ }
     }
     if (!matched) return res.status(422).json({ error: "No matching VKT Transfer from the expected payer to the configured merchant for this invoice amount." });
-    const changed = markPaid.run(transactionHash.toLowerCase(), invoiceId);
-    if (changed.changes !== 1) return res.status(409).json({ error: "Invoice was already processed; reload its status." });
+    const settlement = settleInvoice(transactionHash.toLowerCase(), invoiceId);
+    if (settlement.outcome === "already_paid") {
+      return res.json({ invoiceId, status: "paid", transactionHash: settlement.invoice.transaction_hash });
+    }
+    if (settlement.outcome === "invoice_paid") {
+      return res.status(409).json({ error: "This invoice was already paid with a different transaction." });
+    }
+    if (settlement.outcome === "hash_used") {
+      return res.status(409).json({ error: "Transaction hash has already been assigned to an invoice." });
+    }
+    if (settlement.outcome !== "paid") {
+      return res.status(409).json({ error: "Invoice was already processed; reload its status." });
+    }
     return res.json({ invoiceId, status: "paid", transactionHash, confirmations: head - receipt.blockNumber + 1 });
   } catch (error) {
+    if (error.code === "SQLITE_CONSTRAINT_UNIQUE") {
+      return res.status(409).json({ error: "Transaction hash has already been assigned to an invoice." });
+    }
     return res.status(502).json({ error: "Could not verify the transaction.", detail: error.message });
   }
 });
