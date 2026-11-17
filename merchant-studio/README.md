@@ -19,7 +19,7 @@ Serve this folder with any static HTTP server, or publish it as a static site. N
 4. Check recipient, token contract and amount in the wallet before signing.
 5. A successful receipt is shown only after one confirmation. The merchant should independently verify token contract, recipient, amount and confirmation on BscScan.
 
-## Security boundaries
+## Merchant-side verification\nThe manual verifier reads a transaction receipt from the BNB testnet RPC and checks for a matching ERC-20 `Transfer` log emitted by the entered token contract, with the exact invoice recipient and amount. It does not prove the payer identity, bind a unique order ID on-chain, or prevent a merchant from manually reusing a transaction hash; reconcile each transaction hash against your own order records.\n\n## Security boundaries
 - Never requests or stores seed phrases or private keys.
 - Creating an invoice does not sign or transfer tokens.
 - Does not custody funds, auto-convert tokens, or create liquidity.
