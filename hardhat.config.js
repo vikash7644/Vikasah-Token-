@@ -4,8 +4,6 @@ require("dotenv").config();
 const networks = {};
 if (process.env.BSC_TESTNET_RPC_URL && process.env.DEPLOYER_PRIVATE_KEY) {
   networks.bscTestnet = {
-    type: "http",
-    chainType: "l1",
     url: process.env.BSC_TESTNET_RPC_URL,
     chainId: 97,
     accounts: [process.env.DEPLOYER_PRIVATE_KEY]
