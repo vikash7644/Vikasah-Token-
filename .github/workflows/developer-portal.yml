@@ -31,3 +31,6 @@ jobs:
       - name: Install verifier dependencies
         working-directory: developer-portal/api
         run: npm install --no-audit --no-fund
+      - name: Run verifier API integration tests
+        working-directory: developer-portal/api
+        run: npm test
