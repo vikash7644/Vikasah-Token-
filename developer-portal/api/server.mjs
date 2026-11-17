@@ -1,3 +1,4 @@
+import "dotenv/config";
 import express from "express";
 import Database from "better-sqlite3";
 import { Contract, Interface, JsonRpcProvider, getAddress, isAddress, parseUnits } from "ethers";
@@ -59,6 +60,9 @@ app.post("/v1/payments/verify", async (req, res) => {
   const invoice = getInvoice.get(invoiceId);
   if (!invoice) return res.status(404).json({ error: "Invoice not found." });
   if (invoice.status === "paid") {
+    if (invoice.transaction_hash !== transactionHash.toLowerCase()) {
+      return res.status(409).json({ error: "This invoice was already paid with a different transaction." });
+    }
     return res.json({ invoiceId, status: "paid", transactionHash: invoice.transaction_hash });
   }
   const reused = getByHash.get(transactionHash.toLowerCase());
