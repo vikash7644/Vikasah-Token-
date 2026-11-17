@@ -6,7 +6,8 @@
   "scripts": {
     "compile": "hardhat compile",
     "test": "hardhat test",
-    "deploy:testnet": "hardhat run scripts/deploy.js --network bscTestnet"
+    "deploy:testnet": "hardhat run scripts/deploy.js --network bscTestnet",
+    "deploy:passport:testnet": "hardhat run scripts/deploy-passport.js --network bscTestnet"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
