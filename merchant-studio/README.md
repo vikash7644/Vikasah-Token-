@@ -6,7 +6,7 @@ A static, non-custodial invoice and QR prototype for BNB Smart Chain testnet (ch
 - Create a VKT payment request using merchant address, token contract, amount and optional order reference.
 - Generate a QR code containing a shareable invoice URL.
 - Open the invoice on another device and pay using an injected EIP-1193 wallet.
-- Request a VKT ERC-20 transfer and wait for one block confirmation.
+- Request a VKT ERC-20 transfer and wait for one block confirmation.\n- Verify a submitted transaction hash against the testnet receipt and exact token Transfer event (contract, recipient and amount).
 - Keep a small invoice history in the current browser local storage.
 
 ## Run
