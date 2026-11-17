@@ -34,6 +34,8 @@ The VKT token contract has an owner-controlled global pause function. If VKT tra
 
 This is source code and automated local-contract tests only. It is not deployed to BNB Smart Chain Testnet or Mainnet. Do not configure a production app with a guessed address. Before deployment, run the full GitHub Actions checks, deploy to BSC Testnet using a dedicated test wallet, verify the contract source, and test lock/expiry/withdrawal using test VKT. Obtain an independent security review before mainnet use.
 
+A guarded Hardhat script is provided as `npm run deploy:passport:testnet`. It refuses any chain other than BSC Testnet (chain ID 97), requires `VKT_TOKEN_ADDRESS`, checks that the address contains contract code, and verifies the token name, symbol, 18 decimals, and exact 1,000,000,000 VKT supply before deploying. It then checks the linked token address and 180-day duration. Configure `BSC_TESTNET_RPC_URL`, `DEPLOYER_PRIVATE_KEY`, and `VKT_TOKEN_ADDRESS` only in a protected local `.env` or GitHub Actions secrets; never commit secrets or share private keys in chat. This command has not been run and does not mean a Passport is deployed.
+
 ## Not yet specified
 
 - Access-tier thresholds
