@@ -98,8 +98,20 @@ describe("VKTUtilityPassport", function () {
     }
   });
 
-  it("rejects a zero token address", async function () {
+  it("documents the underlying VKT pause dependency on withdrawals", async function () {
+    const { token, passport, owner, alice, amount } = await deployFixture();
+    await passport.connect(alice).lock(amount);
+    await time.increase(180 * 24 * 60 * 60);
+    await token.connect(owner).pause();
+    await expect(passport.connect(alice).withdraw()).to.be.reverted;
+    await token.connect(owner).unpause();
+    await expect(passport.connect(alice).withdraw()).to.not.be.reverted;
+  });
+
+  it("rejects a zero token address and non-contract token address", async function () {
     const Passport = await ethers.getContractFactory("VKTUtilityPassport");
+    const [owner] = await ethers.getSigners();
     await expect(Passport.deploy(ethers.ZeroAddress)).to.be.revertedWithCustomError(Passport, "ZeroTokenAddress");
+    await expect(Passport.deploy(owner.address)).to.be.revertedWithCustomError(Passport, "InvalidTokenContract");
   });
 });
