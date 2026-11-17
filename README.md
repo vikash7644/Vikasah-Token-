@@ -11,8 +11,9 @@ Vikasah Token is an ERC-20-compatible BEP-20 token project targeting BNB Smart C
 - Supply policy: fixed/capped; no owner mint function
 - Owner allocation: 30% (300,000,000 VKT), minted to a separately configured owner-allocation wallet
 - Remaining distribution reserve: 70% (700,000,000 VKT), minted to a separate reserve wallet
+- Owner-allocation separation: using or transferring the 70% distribution reserve does not debit the 30% owner-allocation wallet. The owner wallet balance changes only when that wallet itself signs a transfer/burn or grants an allowance that is used.
 
-The administrative owner is a separate constructor parameter and should be a multisig for production. The 70% reserve is not automatically divided into liquidity, public sale, ecosystem, treasury or team allocations. Those proposed percentages and their vesting arrangements still need explicit approval and separate distribution controls before launch.
+The 30% owner allocation is a normal ERC-20 balance held at the configured owner-allocation receiver; it is not automatically supplied to liquidity pools or staking contracts. No third party can spend that wallet balance without its own approval/signature. The token contract cannot prevent the wallet owner from voluntarily transferring or approving those tokens to a pool or staking contract. The administrative owner is a separate constructor parameter and should be a multisig for production. The 70% reserve is not automatically divided into liquidity, public sale, ecosystem, treasury or team allocations. Those proposed percentages and their vesting arrangements still need explicit approval and separate distribution controls before launch.
 
 ## Features
 
@@ -21,6 +22,7 @@ The administrative owner is a separate constructor parameter and should be a mul
 - EIP-2612 permit approvals
 - Owner-controlled emergency pause
 - Two-step ownership transfer
+- Separate owner allocation and distribution reserve; no automatic liquidity/staking integration
 - Hard cap and no mint entry point
 
 ## Build and test
