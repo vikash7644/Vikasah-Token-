@@ -80,3 +80,68 @@ export async function readVktUtilityPassport({ provider, passportAddress, accoun
     active
   };
 }
+
+
+const PASSPORT_WRITE_ABI = [
+  "function lock(uint256 amount)",
+  "function withdraw()"
+];
+const ERC20_APPROVAL_ABI = [
+  "function approve(address spender, uint256 amount) returns (bool)",
+  "function decimals() view returns (uint8)"
+];
+
+function requireContractAddress(label, value) {
+  if (typeof value !== "string" || !/^0x[a-fA-F0-9]{40}$/.test(value)) {
+    throw new Error(`${label} must be a valid EVM address.`);
+  }
+  return value;
+}
+
+function requirePositiveTokenAmount(value) {
+  const amountText = String(value);
+  if (!/^(?:0|[1-9]\\d*)(?:\\.\\d{1,18})?$/.test(amountText) || !/[1-9]/.test(amountText)) {
+    throw new Error("Amount must be a positive decimal with at most 18 places.");
+  }
+  return amountText;
+}
+
+async function requirePassportTestnet(signer) {
+  if (!signer?.provider) throw new Error("Connect a wallet first.");
+  const network = await signer.provider.getNetwork();
+  if (Number(network.chainId) !== BSC_TESTNET_CHAIN_ID) {
+    throw new Error("Switch to BNB Smart Chain Testnet (chain ID 97).");
+  }
+}
+
+/** Approves only the chosen VKT amount for the 180-day Passport vault. */
+export async function approveVktForPassport({ signer, tokenAddress, passportAddress, amount }) {
+  await requirePassportTestnet(signer);
+  requireContractAddress("VKT token address", tokenAddress);
+  requireContractAddress("Passport address", passportAddress);
+  const amountText = requirePositiveTokenAmount(amount);
+  const token = new Contract(tokenAddress, ERC20_APPROVAL_ABI, signer);
+  const decimals = Number(await token.decimals());
+  if (decimals !== VKT_DECIMALS) throw new Error("Unexpected VKT decimals; expected 18.");
+  const tx = await token.approve(passportAddress, parseUnits(amountText, decimals));
+  return { hash: tx.hash, wait: () => tx.wait(1) };
+}
+
+/** Locks the chosen amount; the connected wallet must approve the vault first. */
+export async function lockVktInPassport({ signer, passportAddress, amount }) {
+  await requirePassportTestnet(signer);
+  requireContractAddress("Passport address", passportAddress);
+  const amountText = requirePositiveTokenAmount(amount);
+  const passport = new Contract(passportAddress, PASSPORT_WRITE_ABI, signer);
+  const tx = await passport.lock(parseUnits(amountText, VKT_DECIMALS));
+  return { hash: tx.hash, wait: () => tx.wait(1) };
+}
+
+/** Requests withdrawal; the contract enforces the full 180-day lock period. */
+export async function withdrawVktFromPassport({ signer, passportAddress }) {
+  await requirePassportTestnet(signer);
+  requireContractAddress("Passport address", passportAddress);
+  const passport = new Contract(passportAddress, PASSPORT_WRITE_ABI, signer);
+  const tx = await passport.withdraw();
+  return { hash: tx.hash, wait: () => tx.wait(1) };
+}
