@@ -16,7 +16,7 @@ Copy `src/index.js` into your app or install this package from a Git URL after r
 import { connectVktWallet, payVkt, verifyVktPayment } from "./src/index.js";
 
 const { signer, address } = await connectVktWallet();
-const payment = await payVkt({
+// Your trusted merchant backend must create an invoice first, using the\n// connected address as payerAddress and keeping its API key server-side.\nconst invoiceId = "invoice-id-created-by-your-backend";\nconst payment = await payVkt({
   signer,
   tokenAddress: "0xYOUR_DEPLOYED_TESTNET_VKT_ADDRESS",
   merchantAddress: "0xYOUR_MERCHANT_WALLET",
@@ -25,7 +25,7 @@ const payment = await payVkt({
 await payment.wait(1);
 const result = await verifyVktPayment({
   apiBaseUrl: "https://your-verifier.example",
-  invoiceId: "invoice-id-from-your-server",
+  invoiceId,
   transactionHash: payment.hash
 });
 console.log(address, result);
