@@ -109,6 +109,16 @@ test("invoice creation accepts 18-decimal VKT amounts and rejects duplicate IDs"
   assert.equal(duplicate.status, 409);
 });
 
+test("concurrent duplicate invoice requests create exactly one invoice", async () => {
+  const headers = { "content-type": "application/json", authorization: `Bearer ${apiKey}` };
+  const body = { invoiceId: "order-concurrent-unique", amount: "12.5", payerAddress };
+  const requests = await Promise.all(Array.from({ length: 8 }, () => fetch(`${baseUrl}/v1/invoices`, {
+    method: "POST", headers, body: JSON.stringify(body)
+  })));
+  const statuses = requests.map(response => response.status).sort((a, b) => a - b);
+  assert.deepEqual(statuses, [201, 409, 409, 409, 409, 409, 409, 409]);
+});
+
 test("payment verification rejects malformed transaction hashes before RPC access", async () => {
   const response = await fetch(`${baseUrl}/v1/payments/verify`, {
     method: "POST",
