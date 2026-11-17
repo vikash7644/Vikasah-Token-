@@ -43,7 +43,8 @@ app.post("/v1/invoices", (req, res) => {
   if (typeof invoiceId !== "string" || !/^[a-zA-Z0-9_-]{1,80}$/.test(invoiceId)) {
     return res.status(400).json({ error: "invoiceId must be 1-80 letters, numbers, _ or -." });
   }
-  if (!isAddress(payerAddress)) return res.status(400).json({ error: "A valid expected payerAddress is required." });\n  if (typeof amount !== "string" || !/^(?:0|[1-9]\\d*)(?:\\.\\d{1,18})?$/.test(amount) || Number(amount) <= 0) {
+  if (!isAddress(payerAddress)) return res.status(400).json({ error: "A valid expected payerAddress is required." });
+  if (typeof amount !== "string" || !/^(?:0|[1-9]\\d*)(?:\\.\\d{1,18})?$/.test(amount) || Number(amount) <= 0) {
     return res.status(400).json({ error: "amount must be a positive decimal with at most 18 places." });
   }
   try {
