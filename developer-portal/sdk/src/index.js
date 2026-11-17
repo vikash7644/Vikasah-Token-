@@ -1,0 +1,55 @@
+import { BrowserProvider, Contract, formatUnits, parseUnits } from "ethers";
+
+export const BSC_TESTNET_CHAIN_ID = 97;
+export const VKT_DECIMALS = 18;
+const ERC20_ABI = [
+  "function transfer(address to, uint256 amount) returns (bool)",
+  "function decimals() view returns (uint8)",
+  "function balanceOf(address account) view returns (uint256)"
+];
+
+/** Connects to an injected EIP-1193 wallet. Never accepts or handles private keys. */
+export async function connectVktWallet() {
+  if (!globalThis.ethereum?.request) throw new Error("No compatible browser wallet was found.");
+  const provider = new BrowserProvider(globalThis.ethereum);
+  const accounts = await provider.send("eth_requestAccounts", []);
+  if (!accounts?.[0]) throw new Error("Wallet connection was not approved.");
+  const network = await provider.getNetwork();
+  if (Number(network.chainId) !== BSC_TESTNET_CHAIN_ID) {
+    throw new Error("Switch your wallet to BNB Smart Chain Testnet (chain ID 97).");
+  }
+  return { provider, signer: await provider.getSigner(), address: accounts[0] };
+}
+
+/** Sends an exact VKT transfer on BNB Smart Chain Testnet. */
+export async function payVkt({ signer, tokenAddress, merchantAddress, amount }) {
+  if (!signer) throw new Error("Connect a wallet first.");
+  if (!/^0x[a-fA-F0-9]{40}$/.test(tokenAddress) || !/^0x[a-fA-F0-9]{40}$/.test(merchantAddress)) {
+    throw new Error("A valid deployed token and merchant address are required.");
+  }
+  if (!/^(?:0|[1-9]\\d*)(?:\\.\\d{1,18})?$/.test(String(amount)) || Number(amount) <= 0) {
+    throw new Error("Amount must be a positive decimal with at most 18 places.");
+  }
+  const network = await signer.provider.getNetwork();
+  if (Number(network.chainId) !== BSC_TESTNET_CHAIN_ID) throw new Error("Wrong network: BNB Smart Chain Testnet is required.");
+  const token = new Contract(tokenAddress, ERC20_ABI, signer);
+  const decimals = Number(await token.decimals());
+  if (decimals !== VKT_DECIMALS) throw new Error("Unexpected VKT decimals; expected 18.");
+  const tx = await token.transfer(merchantAddress, parseUnits(String(amount), decimals));
+  return { hash: tx.hash, wait: () => tx.wait(1) };
+}
+
+/** Requests server-side receipt verification; the server must independently validate the invoice. */
+export async function verifyVktPayment({ apiBaseUrl, invoiceId, transactionHash }) {
+  if (!apiBaseUrl || !invoiceId || !/^0x[a-fA-F0-9]{64}$/.test(transactionHash)) {
+    throw new Error("apiBaseUrl, invoiceId and a valid transaction hash are required.");
+  }
+  const response = await fetch(new URL("/v1/payments/verify", apiBaseUrl), {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ invoiceId, transactionHash })
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || "Payment verification failed.");
+  return data;
+}
