@@ -12,6 +12,8 @@ npm install
 npm start
 ```
 
+The server loads `.env` automatically. Never commit it.
+
 ## API
 
 - `GET /health` — service/network health.
