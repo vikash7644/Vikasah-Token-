@@ -10,7 +10,8 @@ if (!isAddress(process.env.VKT_TOKEN_ADDRESS) || !isAddress(process.env.VKT_MERC
 }
 const tokenAddress = getAddress(process.env.VKT_TOKEN_ADDRESS);
 const merchantAddress = getAddress(process.env.VKT_MERCHANT_ADDRESS);
-const minConfirmations = Math.max(1, Number(process.env.MIN_CONFIRMATIONS || 3));
+const minConfirmations = Number(process.env.MIN_CONFIRMATIONS || 3);
+if (!Number.isSafeInteger(minConfirmations) || minConfirmations < 1) throw new Error("MIN_CONFIRMATIONS must be a positive integer.");
 const provider = new JsonRpcProvider(process.env.BSC_TESTNET_RPC_URL, 97);
 const db = new Database(process.env.DATABASE_PATH || "./vkt-payments.sqlite");
 db.pragma("journal_mode = WAL");
@@ -23,7 +24,7 @@ db.exec(`
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   );
 `);
-const insertInvoice = db.prepare("INSERT INTO invoices (id, amount_wei) VALUES (?, ?)");
+const insertInvoice = db.prepare("INSERT INTO invoices (id, amount_wei, payer_address) VALUES (?, ?, ?)");
 const getInvoice = db.prepare("SELECT * FROM invoices WHERE id = ?");
 const getByHash = db.prepare("SELECT * FROM invoices WHERE transaction_hash = ?");
 const markPaid = db.prepare("UPDATE invoices SET status='paid', transaction_hash=? WHERE id=? AND status='pending'");
@@ -37,15 +38,15 @@ app.post("/v1/invoices", (req, res) => {
   if (req.get("authorization") !== `Bearer ${process.env.MERCHANT_API_KEY}`) {
     return res.status(401).json({ error: "Unauthorized" });
   }
-  const { invoiceId, amount } = req.body || {};
+  const { invoiceId, amount, payerAddress } = req.body || {};
   if (typeof invoiceId !== "string" || !/^[a-zA-Z0-9_-]{1,80}$/.test(invoiceId)) {
     return res.status(400).json({ error: "invoiceId must be 1-80 letters, numbers, _ or -." });
   }
-  if (typeof amount !== "string" || !/^(?:0|[1-9]\\d*)(?:\\.\\d{1,18})?$/.test(amount) || Number(amount) <= 0) {
+  if (!isAddress(payerAddress)) return res.status(400).json({ error: "A valid expected payerAddress is required." });\n  if (typeof amount !== "string" || !/^(?:0|[1-9]\\d*)(?:\\.\\d{1,18})?$/.test(amount) || Number(amount) <= 0) {
     return res.status(400).json({ error: "amount must be a positive decimal with at most 18 places." });
   }
   try {
-    insertInvoice.run(invoiceId, parseUnits(amount, 18).toString());
+    insertInvoice.run(invoiceId, parseUnits(amount, 18).toString(), getAddress(payerAddress));
     return res.status(201).json({ invoiceId, amount, currency: "VKT", status: "pending" });
   } catch {
     return res.status(409).json({ error: "Invoice ID already exists." });
