@@ -5,6 +5,7 @@ import net from "node:net";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import Database from "better-sqlite3";
 
 const apiKey = "test-only-vkt-api-key";
 const tokenAddress = "0x0000000000000000000000000000000000000001";
@@ -24,6 +25,19 @@ async function freePort() {
 
 before(async () => {
   tempDir = await mkdtemp(join(tmpdir(), "vkt-api-test-"));
+  const databasePath = join(tempDir, "test.sqlite");
+  const legacyDb = new Database(databasePath);
+  legacyDb.exec(`
+    CREATE TABLE invoices (
+      id TEXT PRIMARY KEY,
+      amount_wei TEXT NOT NULL,
+      payer_address TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending',
+      transaction_hash TEXT UNIQUE,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+  legacyDb.close();
   const port = await freePort();
   baseUrl = `http://127.0.0.1:${port}`;
   child = spawn(process.execPath, ["server.mjs"], {
@@ -35,7 +49,7 @@ before(async () => {
       VKT_TOKEN_ADDRESS: tokenAddress,
       VKT_MERCHANT_ADDRESS: merchantAddress,
       MERCHANT_API_KEY: apiKey,
-      DATABASE_PATH: join(tempDir, "test.sqlite")
+      DATABASE_PATH: databasePath
     },
     stdio: "ignore"
   });
@@ -57,6 +71,14 @@ after(async () => {
     await new Promise(resolve => child.once("exit", resolve));
   }
   if (tempDir) await rm(tempDir, { recursive: true, force: true });
+});
+
+test("startup migrates existing invoice databases with reorg tracking columns", async () => {
+  const database = new Database(join(tempDir, "test.sqlite"), { readonly: true });
+  const columns = new Set(database.prepare("PRAGMA table_info(invoices)").all().map(column => column.name));
+  database.close();
+  assert.equal(columns.has("block_number"), true);
+  assert.equal(columns.has("block_hash"), true);
 });
 
 test("health endpoint identifies BNB Smart Chain Testnet", async () => {
