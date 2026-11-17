@@ -21,14 +21,17 @@ describe("VKTUtilityPassport", function () {
 
   it("locks the user's chosen amount for exactly 180 days", async function () {
     const { token, passport, alice, amount } = await deployFixture();
-    const before = await time.latest();
-    await expect(passport.connect(alice).lock(amount))
+    const tx = await passport.connect(alice).lock(amount);
+    const receipt = await tx.wait();
+    const lockBlock = await ethers.provider.getBlock(receipt.blockNumber);
+    const expectedUnlockAt = lockBlock.timestamp + 180 * 24 * 60 * 60;
+    await expect(tx)
       .to.emit(passport, "Locked")
-      .withArgs(alice.address, amount, before + 180 * 24 * 60 * 60);
+      .withArgs(alice.address, amount, expectedUnlockAt);
 
     const [lockedAmount, unlockAt] = await passport.positionOf(alice.address);
     expect(lockedAmount).to.equal(amount);
-    expect(unlockAt).to.equal(before + 180 * 24 * 60 * 60);
+    expect(unlockAt).to.equal(expectedUnlockAt);
     expect(await passport.isLocked(alice.address)).to.equal(true);
     expect(await passport.hasActivePassport(alice.address)).to.equal(true);
     expect(await token.balanceOf(await passport.getAddress())).to.equal(amount);
@@ -48,7 +51,9 @@ describe("VKTUtilityPassport", function () {
       .to.emit(passport, "Withdrawn")
       .withArgs(alice.address, amount);
     expect(await token.balanceOf(alice.address)).to.equal(balanceBefore);
-    expect(await passport.positionOf(alice.address)).to.deep.equal([0n, 0n]);
+    const [remainingAmount, remainingUnlockAt] = await passport.positionOf(alice.address);
+    expect(remainingAmount).to.equal(0n);
+    expect(remainingUnlockAt).to.equal(0n);
   });
 
   it("prevents a second lock while a position is active", async function () {
