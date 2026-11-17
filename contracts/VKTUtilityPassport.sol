@@ -25,6 +25,7 @@ contract VKTUtilityPassport is ReentrancyGuard {
     mapping(address => Position) private positions;
 
     error ZeroTokenAddress();
+    error InvalidTokenContract();
     error ZeroAmount();
     error PositionAlreadyActive();
     error NoActivePosition();
@@ -35,6 +36,7 @@ contract VKTUtilityPassport is ReentrancyGuard {
 
     constructor(address tokenAddress) {
         if (tokenAddress == address(0)) revert ZeroTokenAddress();
+        if (tokenAddress.code.length == 0) revert InvalidTokenContract();
         vkt = IERC20(tokenAddress);
     }
 
