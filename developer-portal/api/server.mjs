@@ -44,11 +44,13 @@ app.post("/v1/invoices", (req, res) => {
     return res.status(400).json({ error: "invoiceId must be 1-80 letters, numbers, _ or -." });
   }
   if (!isAddress(payerAddress)) return res.status(400).json({ error: "A valid expected payerAddress is required." });
-  if (typeof amount !== "string" || !/^(?:0|[1-9]\\d*)(?:\\.\\d{1,18})?$/.test(amount) || Number(amount) <= 0) {
+  if (typeof amount !== "string" || !/^(?:0|[1-9]\d*)(?:\.\d{1,18})?$/.test(amount)) {
     return res.status(400).json({ error: "amount must be a positive decimal with at most 18 places." });
   }
   try {
-    insertInvoice.run(invoiceId, parseUnits(amount, 18).toString(), getAddress(payerAddress));
+    const amountWei = parseUnits(amount, 18);
+    if (amountWei <= 0n) return res.status(400).json({ error: "amount must be greater than zero." });
+    insertInvoice.run(invoiceId, amountWei.toString(), getAddress(payerAddress));
     return res.status(201).json({ invoiceId, amount, currency: "VKT", status: "pending" });
   } catch {
     return res.status(409).json({ error: "Invoice ID already exists." });
