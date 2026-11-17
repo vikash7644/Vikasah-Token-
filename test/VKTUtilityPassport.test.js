@@ -108,6 +108,42 @@ describe("VKTUtilityPassport", function () {
     await expect(passport.connect(alice).withdraw()).to.not.be.reverted;
   });
 
+
+  it("does not create a position when the token transfer fails", async function () {
+    const { token, passport, owner, alice, amount } = await deployFixture();
+    await token.connect(owner).pause();
+
+    await expect(passport.connect(alice).lock(amount)).to.be.reverted;
+    const [lockedAmount, unlockAt] = await passport.positionOf(alice.address);
+    expect(lockedAmount).to.equal(0n);
+    expect(unlockAt).to.equal(0n);
+    expect(await token.balanceOf(await passport.getAddress())).to.equal(0n);
+  });
+
+  it("requires the user to approve enough VKT before locking", async function () {
+    const { token, passport, alice, amount } = await deployFixture();
+    await token.connect(alice).approve(await passport.getAddress(), amount - 1n);
+
+    await expect(passport.connect(alice).lock(amount)).to.be.reverted;
+    const [lockedAmount] = await passport.positionOf(alice.address);
+    expect(lockedAmount).to.equal(0n);
+    expect(await token.balanceOf(await passport.getAddress())).to.equal(0n);
+  });
+
+  it("allows withdrawal at the exact unlock timestamp", async function () {
+    const { passport, alice, amount } = await deployFixture();
+    const tx = await passport.connect(alice).lock(amount);
+    const receipt = await tx.wait();
+    const block = await ethers.provider.getBlock(receipt.blockNumber);
+    const unlockAt = block.timestamp + 180 * 24 * 60 * 60;
+
+    await time.setNextBlockTimestamp(unlockAt);
+    await expect(passport.connect(alice).withdraw()).to.not.be.reverted;
+    const [remainingAmount, remainingUnlockAt] = await passport.positionOf(alice.address);
+    expect(remainingAmount).to.equal(0n);
+    expect(remainingUnlockAt).to.equal(0n);
+  });
+
   it("rejects a zero token address and non-contract token address", async function () {
     const Passport = await ethers.getContractFactory("VKTUtilityPassport");
     const [owner] = await ethers.getSigners();
