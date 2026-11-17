@@ -53,6 +53,55 @@ describe("VikasahToken", function () {
     expect(await token.owner()).to.equal(alice.address);
   });
 
+
+  it("supports EIP-2612 permit approvals", async function () {
+    const { token, receiver, alice } = await deployToken();
+    const network = await ethers.provider.getNetwork();
+    const deadline = BigInt((await ethers.provider.getBlock("latest")).timestamp) + 3600n;
+    const value = ethers.parseEther("12");
+    const domain = {
+      name: "Vikasah Token",
+      version: "1",
+      chainId: network.chainId,
+      verifyingContract: await token.getAddress()
+    };
+    const types = {
+      Permit: [
+        { name: "owner", type: "address" },
+        { name: "spender", type: "address" },
+        { name: "value", type: "uint256" },
+        { name: "nonce", type: "uint256" },
+        { name: "deadline", type: "uint256" }
+      ]
+    };
+    const signature = ethers.Signature.from(await receiver.signTypedData(domain, types, {
+      owner: receiver.address,
+      spender: alice.address,
+      value,
+      nonce: await token.nonces(receiver.address),
+      deadline
+    }));
+    await token.permit(
+      receiver.address,
+      alice.address,
+      value,
+      deadline,
+      signature.v,
+      signature.r,
+      signature.s
+    );
+    expect(await token.allowance(receiver.address, alice.address)).to.equal(value);
+  });
+
+  it("supports allowance-based transferFrom", async function () {
+    const { token, reserve, alice, outsider } = await deployToken();
+    const amount = ethers.parseEther("40");
+    await token.connect(reserve).approve(outsider.address, amount);
+    await token.connect(outsider).transferFrom(reserve.address, alice.address, amount);
+    expect(await token.balanceOf(alice.address)).to.equal(amount);
+    expect(await token.allowance(reserve.address, outsider.address)).to.equal(0n);
+  });
+
   it("rejects zero addresses and duplicate allocation wallets", async function () {
     const Token = await ethers.getContractFactory("VikasahToken");
     const [owner, wallet] = await ethers.getSigners();
