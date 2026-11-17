@@ -55,7 +55,7 @@ describe("VikasahToken", function () {
 
 
   it("supports EIP-2612 permit approvals", async function () {
-    const { token, receiver, alice } = await deployToken();
+    const { token, ownerAllocation, alice } = await deployToken();
     const network = await ethers.provider.getNetwork();
     const deadline = BigInt((await ethers.provider.getBlock("latest")).timestamp) + 3600n;
     const value = ethers.parseEther("12");
@@ -74,15 +74,15 @@ describe("VikasahToken", function () {
         { name: "deadline", type: "uint256" }
       ]
     };
-    const signature = ethers.Signature.from(await receiver.signTypedData(domain, types, {
-      owner: receiver.address,
+    const signature = ethers.Signature.from(await ownerAllocation.signTypedData(domain, types, {
+      owner: ownerAllocation.address,
       spender: alice.address,
       value,
-      nonce: await token.nonces(receiver.address),
+      nonce: await token.nonces(ownerAllocation.address),
       deadline
     }));
     await token.permit(
-      receiver.address,
+      ownerAllocation.address,
       alice.address,
       value,
       deadline,
@@ -90,7 +90,7 @@ describe("VikasahToken", function () {
       signature.r,
       signature.s
     );
-    expect(await token.allowance(receiver.address, alice.address)).to.equal(value);
+    expect(await token.allowance(ownerAllocation.address, alice.address)).to.equal(value);
   });
 
   it("supports allowance-based transferFrom", async function () {
@@ -100,6 +100,26 @@ describe("VikasahToken", function () {
     await token.connect(outsider).transferFrom(reserve.address, alice.address, amount);
     expect(await token.balanceOf(alice.address)).to.equal(amount);
     expect(await token.allowance(reserve.address, outsider.address)).to.equal(0n);
+  });
+
+
+  it("keeps the owner allocation separate when the distribution reserve is used", async function () {
+    const { token, ownerAllocation, reserve, alice, outsider } = await deployToken();
+    const ownerReserveBefore = await token.balanceOf(ownerAllocation.address);
+
+    await token.connect(reserve).transfer(alice.address, ethers.parseEther("1000"));
+    expect(await token.balanceOf(ownerAllocation.address)).to.equal(ownerReserveBefore);
+    await expect(
+      token.connect(outsider).transferFrom(ownerAllocation.address, alice.address, 1n)
+    ).to.be.reverted;
+    expect(await token.balanceOf(ownerAllocation.address)).to.equal(ownerReserveBefore);
+  });
+
+  it("requires the owner-allocation wallet itself to approve spending", async function () {
+    const { token, ownerAllocation, alice, outsider } = await deployToken();
+    await token.connect(outsider).approve(alice.address, ethers.parseEther("1"));
+    expect(await token.allowance(ownerAllocation.address, alice.address)).to.equal(0n);
+    expect(await token.allowance(outsider.address, alice.address)).to.equal(ethers.parseEther("1"));
   });
 
   it("rejects zero addresses and duplicate allocation wallets", async function () {
