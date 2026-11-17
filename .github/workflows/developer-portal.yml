@@ -1,0 +1,33 @@
+name: VKT Developer Portal Checks
+
+on:
+  pull_request:
+    paths:
+      - "developer-portal/**"
+      - ".github/workflows/developer-portal.yml"
+  push:
+    branches: [main]
+    paths:
+      - "developer-portal/**"
+      - ".github/workflows/developer-portal.yml"
+  workflow_dispatch:
+
+jobs:
+  syntax-and-install:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Check JavaScript syntax
+        run: |
+          node --check developer-portal/app.js
+          node --check developer-portal/sdk/src/index.js
+          node --check developer-portal/api/server.mjs
+      - name: Install SDK dependencies
+        working-directory: developer-portal/sdk
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Install verifier dependencies
+        working-directory: developer-portal/api
+        run: npm install --no-audit --no-fund
