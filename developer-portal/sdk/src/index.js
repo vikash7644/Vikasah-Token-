@@ -34,7 +34,7 @@ export async function payVkt({ signer, tokenAddress, merchantAddress, amount }) 
   const token = new Contract(tokenAddress, ERC20_ABI, signer);
   const decimals = Number(await token.decimals());
   if (decimals !== VKT_DECIMALS) throw new Error("Unexpected VKT decimals; expected 18.");
-  const tx = await token.transfer(merchantAddress, parseUnits(String(amount), decimals));
+  const tx = await token.transfer(merchantAddress, parseUnits(amountText, decimals));
   return { hash: tx.hash, wait: () => tx.wait(1) };
 }
 
