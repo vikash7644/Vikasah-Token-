@@ -25,6 +25,12 @@ The 30% owner allocation is a normal ERC-20 balance held at the configured owner
 - Separate owner allocation and distribution reserve; no automatic liquidity/staking integration
 - Hard cap and no mint entry point
 
+## 180-day Utility Passport
+
+A separate user-controlled vault is being developed in `contracts/VKTUtilityPassport.sol`. Each wallet can lock a chosen VKT amount for exactly 180 days, read its active position, and withdraw only after expiry. It has no owner/admin, confiscation, rescue, or early-unlock method. The underlying VKT token's global pause can still temporarily prevent token transfers; see [the Utility Passport trust model](docs/VKT-UTILITY-PASSPORT.md).
+
+This contract is source/test work only and has not been deployed. Access-tier thresholds and merchant benefits remain undecided.
+
 ## Build and test
 
 Requires Node.js 20 or newer.
