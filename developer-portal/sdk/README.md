@@ -59,3 +59,43 @@ console.log(status.active, status.amount, status.unlockAt);
 ```
 
 This helper only reads on-chain state. It does not assign access tiers or merchant benefits; those policies are not defined yet. Do not use a placeholder address in a live app.
+
+
+## Utility Passport actions (wallet-signed)
+
+Once both VKT and the Passport are deployed and verified on BSC Testnet, the SDK can request the following user-approved actions:
+
+```js
+import {
+  approveVktForPassport,
+  lockVktInPassport,
+  readVktUtilityPassport,
+  withdrawVktFromPassport
+} from "./src/index.js";
+
+// User approves only the chosen amount (wallet confirmation required).
+const approval = await approveVktForPassport({
+  signer,
+  tokenAddress: "0xDEPLOYED_VKT_ADDRESS",
+  passportAddress: "0xDEPLOYED_PASSPORT_ADDRESS",
+  amount: "100"
+});
+await approval.wait();
+
+// User separately confirms the lock transaction.
+const lock = await lockVktInPassport({
+  signer,
+  passportAddress: "0xDEPLOYED_PASSPORT_ADDRESS",
+  amount: "100"
+});
+await lock.wait();
+
+// The contract rejects this until the full 180 days have elapsed.
+const withdrawal = await withdrawVktFromPassport({
+  signer,
+  passportAddress: "0xDEPLOYED_PASSPORT_ADDRESS"
+});
+await withdrawal.wait();
+```
+
+The SDK checks chain ID 97 and 18 token decimals, and never receives private keys. Approval and lock are separate wallet transactions. The contract, not the SDK, enforces the 180-day wait. If the underlying VKT token is paused, its transfer restrictions can prevent locking or withdrawal until transfers are unpaused. These actions are not usable until real verified testnet addresses exist; no address is supplied or assumed here.
