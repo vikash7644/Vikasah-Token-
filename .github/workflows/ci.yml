@@ -21,6 +21,8 @@ jobs:
           node-version: 20
       - name: Install dependencies
         run: npm install
+      - name: Check Merchant Studio JavaScript syntax
+        run: node --check merchant-studio/app.js
       - name: Compile contracts
         run: npm run compile
       - name: Run tests
