@@ -1,11 +1,10 @@
-import { BrowserProvider, Contract, formatUnits, parseUnits } from "ethers";
+import { BrowserProvider, Contract, parseUnits } from "ethers";
 
 export const BSC_TESTNET_CHAIN_ID = 97;
 export const VKT_DECIMALS = 18;
 const ERC20_ABI = [
   "function transfer(address to, uint256 amount) returns (bool)",
-  "function decimals() view returns (uint8)",
-  "function balanceOf(address account) view returns (uint256)"
+  "function decimals() view returns (uint8)"
 ];
 
 /** Connects to an injected EIP-1193 wallet. Never accepts or handles private keys. */
@@ -27,7 +26,7 @@ export async function payVkt({ signer, tokenAddress, merchantAddress, amount }) 
   if (!/^0x[a-fA-F0-9]{40}$/.test(tokenAddress) || !/^0x[a-fA-F0-9]{40}$/.test(merchantAddress)) {
     throw new Error("A valid deployed token and merchant address are required.");
   }
-  if (!/^(?:0|[1-9]\\d*)(?:\\.\\d{1,18})?$/.test(String(amount)) || Number(amount) <= 0) {
+  if (!/^(?:0|[1-9]\d*)(?:\.\d{1,18})?$/.test(String(amount)) || Number(amount) <= 0) {
     throw new Error("Amount must be a positive decimal with at most 18 places.");
   }
   const network = await signer.provider.getNetwork();
