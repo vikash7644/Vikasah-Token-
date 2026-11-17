@@ -13,9 +13,9 @@ This document proposes utility features that can distinguish Vikasah Token (VKT)
 
 ## Proposed differentiators
 
-### 1. VKT Utility Pass (recommended first feature)
+### 1. VKT Utility Passport (recommended first feature)
 
-A holder can voluntarily lock a chosen amount of their own VKT in a dedicated utility vault for a fixed 180-day period. The vault records the user's locked amount and unlock timestamp. While locked, the user can qualify for clearly defined ecosystem access tiers.
+A holder can voluntarily lock a chosen amount of their own VKT in a dedicated utility vault for a fixed 180-day period. The vault records the user's locked amount and unlock timestamp. A read-only on-chain Passport view can show the holder's current access tier and unlock date; it is not a tradable NFT and cannot be sold or transferred. While locked, the user can qualify for clearly defined ecosystem access tiers. Apps and participating merchants can verify eligibility directly from the contract.
 
 Important boundaries:
 - This is a utility/access feature, not staking yield.
@@ -28,7 +28,7 @@ Important boundaries:
 
 ### 2. VKT Merchant Payment Receipts
 
-An optional payment helper can emit a structured on-chain receipt containing merchant, payer, amount, and an order reference hash. It should not custody funds or impose a transfer tax. Merchants can verify payments using the transaction and receipt event.
+An optional payment helper can emit a structured on-chain receipt containing merchant, payer, amount, and an order reference hash. It should not custody funds or impose a transfer tax. Merchants can verify payments using the transaction and receipt event. Participating merchants can optionally check a buyer's Utility Passport tier before applying a clearly disclosed benefit.
 
 ### 3. VKT Batch Payments
 
@@ -40,9 +40,9 @@ A governance module can let eligible holders signal on ecosystem proposals. Voti
 
 ## Recommended implementation order
 
-1. Keep the existing fixed-supply token contract unchanged while its CI compile/test failure is resolved.
+1. Keep the existing fixed-supply token contract unchanged; the Solidity compile/test CI workflow has now passed on commit 99592130d41ab111932e31293931266d3b58945b.
 2. Specify the Utility Pass tier thresholds and whether tiers grant access only or any discounts; the lock period is fixed at 180 days.
-3. Implement the Utility Pass as a separate, narrowly scoped contract with tests for deposits, unlock timing, withdrawals, reentrancy protection, and owner-allocation separation.
+3. Implement the Utility Passport as a separate, narrowly scoped contract with tests for deposits, unlock timing, withdrawals, reentrancy protection, and owner-allocation separation.
 4. Add Merchant Receipts and Batch Payments as optional helpers after review.
 5. Consider governance only after the ecosystem and treasury rules are public.
 
@@ -52,4 +52,4 @@ A governance module can let eligible holders signal on ecosystem proposals. Voti
 - What minimum VKT balance should qualify for each tier?
 - What concrete benefit does each tier unlock (for example, app features, merchant discounts, or ecosystem access)?
 
-No tier amounts, lock periods, discounts, reward rates, or sale allocations are assumed by this proposal.
+No tier amounts, discounts, reward rates, or sale allocations are assumed by this proposal. The 180-day lock is fixed; no mainnet deployment is authorized by this design document.
