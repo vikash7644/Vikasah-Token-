@@ -15,15 +15,16 @@ This document proposes utility features that can distinguish Vikasah Token (VKT)
 
 ### 1. VKT Utility Pass (recommended first feature)
 
-A holder can voluntarily lock a chosen amount of their own VKT in a dedicated utility vault for a chosen period. The vault records the user's locked amount and unlock timestamp. While locked, the user can qualify for clearly defined ecosystem access tiers.
+A holder can voluntarily lock a chosen amount of their own VKT in a dedicated utility vault for a fixed 180-day period. The vault records the user's locked amount and unlock timestamp. While locked, the user can qualify for clearly defined ecosystem access tiers.
 
 Important boundaries:
 - This is a utility/access feature, not staking yield.
 - No interest, APY, or token rewards are promised.
 - The 30% owner allocation is not enrolled automatically.
 - A user must explicitly approve and deposit their own tokens.
-- Withdrawals are available after the selected lock period; no administrator can seize user deposits.
-- Tier thresholds and lock periods must be approved before implementation.
+- Withdrawals are available only after the 180-day lock period; no administrator can seize user deposits.
+- The approved lock period is 180 days only; no 30-day or 90-day option is included.
+- Tier thresholds and concrete access benefits still require approval before implementation.
 
 ### 2. VKT Merchant Payment Receipts
 
@@ -40,14 +41,14 @@ A governance module can let eligible holders signal on ecosystem proposals. Voti
 ## Recommended implementation order
 
 1. Keep the existing fixed-supply token contract unchanged while its CI compile/test failure is resolved.
-2. Specify the Utility Pass thresholds, available lock periods, and whether tiers grant access only or any discounts.
+2. Specify the Utility Pass tier thresholds and whether tiers grant access only or any discounts; the lock period is fixed at 180 days.
 3. Implement the Utility Pass as a separate, narrowly scoped contract with tests for deposits, unlock timing, withdrawals, reentrancy protection, and owner-allocation separation.
 4. Add Merchant Receipts and Batch Payments as optional helpers after review.
 5. Consider governance only after the ecosystem and treasury rules are public.
 
 ## Decisions required before coding the Utility Pass
 
-- Which lock periods should be offered?
+- Approved lock period: 180 days only.
 - What minimum VKT balance should qualify for each tier?
 - What concrete benefit does each tier unlock (for example, app features, merchant discounts, or ecosystem access)?
 
