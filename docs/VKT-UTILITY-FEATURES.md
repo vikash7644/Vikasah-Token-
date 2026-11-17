@@ -53,3 +53,36 @@ A governance module can let eligible holders signal on ecosystem proposals. Voti
 - What concrete benefit does each tier unlock (for example, app features, merchant discounts, or ecosystem access)?
 
 No tier amounts, discounts, reward rates, or sale allocations are assumed by this proposal. The 180-day lock is fixed; no mainnet deployment is authorized by this design document.
+
+
+## VKT software ecosystem (proposed)
+
+These are companion software products, not extra powers hidden inside the token contract. They should use public on-chain data and user-authorized wallet transactions.
+
+### 5. VKT Merchant Studio
+A web dashboard for merchants to create payment requests, generate QR codes, view confirmed VKT payments, export receipts, and verify a transaction on the BNB Chain explorer. It must clearly distinguish pending from confirmed payments and never ask merchants for seed phrases or private keys.
+
+### 6. VKT Checkout SDK
+A small open-source JavaScript SDK and checkout widget that websites can integrate to request a VKT payment. The customer approves and sends the payment from their own wallet. The SDK watches for the matching on-chain receipt and reports confirmation; it must not custody funds.
+
+### 7. VKT Invoice & QR
+A simple invoice generator that creates a unique order reference, requested amount, merchant wallet, and QR/deep link. The invoice itself is not proof of payment; the app verifies the matching on-chain transaction before marking it paid.
+
+### 8. VKT Proof API
+A read-only API for apps and merchants to verify token balances, Utility Passport eligibility, payment receipt events, and transaction confirmations. Rate limits, chain ID checks, and clear error states are required. It must not expose private user data or claim that a pending transaction is final.
+
+### 9. VKT Treasury & Allocation Monitor
+A public dashboard showing the fixed supply, current circulating/total supply, owner allocation wallet balance, distribution reserve balance, and any published vesting or lock schedules. It must not have the ability to move funds. The owner allocation and distribution reserve remain visibly separate.
+
+### 10. VKT Developer Portal
+Documentation, contract addresses after deployment, verified ABI downloads, SDK examples, testnet faucet links from official sources, and integration guides. Never publish deployment addresses until they are verified on-chain.
+
+## Software delivery order
+
+1. Build Merchant Studio and Invoice & QR as a testnet-first web app.
+2. Build the Checkout SDK and Proof API with automated tests.
+3. Add the public Treasury & Allocation Monitor.
+4. Publish the Developer Portal after testnet contracts and addresses are verified.
+5. Keep every companion app non-custodial: no seed phrase collection, no private-key collection, and no automatic token transfers.
+
+All software features above are proposals until implemented, tested, and reviewed. They do not guarantee sales, adoption, token price, or exchange listings.
