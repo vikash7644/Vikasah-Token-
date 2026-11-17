@@ -1,7 +1,9 @@
 (() => {
 const $=id=>document.getElementById(id), CHAIN_ID="0x61";
 const CHAIN_PARAMS={chainId:CHAIN_ID,chainName:"BNB Smart Chain Testnet",nativeCurrency:{name:"tBNB",symbol:"tBNB",decimals:18},rpcUrls:["https://bsc-testnet-dataseed.bnbchain.org"],blockExplorerUrls:["https://testnet.bscscan.com/"]};
-const ABI=["function transfer(address to,uint256 value) returns (bool)","event Transfer(address indexed from,address indexed to,uint256 value)"];\nconst TRANSFER_IFACE=new ethers.Interface(ABI);\nconst PUBLIC_RPC="https://bsc-testnet-dataseed.bnbchain.org";
+const ABI=["function transfer(address to,uint256 value) returns (bool)","event Transfer(address indexed from,address indexed to,uint256 value)"];
+const TRANSFER_IFACE=new ethers.Interface(ABI);
+const PUBLIC_RPC="https://bsc-testnet-dataseed.bnbchain.org";
 let invoice=null,provider=null,signer=null;
 const fmtAddress=v=>v?v.slice(0,6)+"…"+v.slice(-4):"";
 const validAddress=v=>window.ethers&&ethers.isAddress(v);
