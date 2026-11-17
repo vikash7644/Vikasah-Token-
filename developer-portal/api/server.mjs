@@ -1,0 +1,104 @@
+import express from "express";
+import Database from "better-sqlite3";
+import { Contract, Interface, JsonRpcProvider, getAddress, isAddress, parseUnits } from "ethers";
+
+const required = ["BSC_TESTNET_RPC_URL", "VKT_TOKEN_ADDRESS", "VKT_MERCHANT_ADDRESS", "MERCHANT_API_KEY"];
+for (const key of required) if (!process.env[key]) throw new Error(`Missing environment variable: ${key}`);
+if (!isAddress(process.env.VKT_TOKEN_ADDRESS) || !isAddress(process.env.VKT_MERCHANT_ADDRESS)) {
+  throw new Error("VKT_TOKEN_ADDRESS and VKT_MERCHANT_ADDRESS must be valid addresses.");
+}
+const tokenAddress = getAddress(process.env.VKT_TOKEN_ADDRESS);
+const merchantAddress = getAddress(process.env.VKT_MERCHANT_ADDRESS);
+const minConfirmations = Math.max(1, Number(process.env.MIN_CONFIRMATIONS || 3));
+const provider = new JsonRpcProvider(process.env.BSC_TESTNET_RPC_URL, 97);
+const db = new Database(process.env.DATABASE_PATH || "./vkt-payments.sqlite");
+db.pragma("journal_mode = WAL");
+db.exec(`
+  CREATE TABLE IF NOT EXISTS invoices (
+    id TEXT PRIMARY KEY,
+    amount_wei TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    transaction_hash TEXT UNIQUE,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
+`);
+const insertInvoice = db.prepare("INSERT INTO invoices (id, amount_wei) VALUES (?, ?)");
+const getInvoice = db.prepare("SELECT * FROM invoices WHERE id = ?");
+const getByHash = db.prepare("SELECT * FROM invoices WHERE transaction_hash = ?");
+const markPaid = db.prepare("UPDATE invoices SET status='paid', transaction_hash=? WHERE id=? AND status='pending'");
+const iface = new Interface(["event Transfer(address indexed from, address indexed to, uint256 value)"]);
+const app = express();
+app.use(express.json({ limit: "16kb" }));
+
+app.get("/health", (_req, res) => res.json({ ok: true, network: "bsc-testnet", chainId: 97 }));
+
+app.post("/v1/invoices", (req, res) => {
+  if (req.get("authorization") !== `Bearer ${process.env.MERCHANT_API_KEY}`) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  const { invoiceId, amount } = req.body || {};
+  if (typeof invoiceId !== "string" || !/^[a-zA-Z0-9_-]{1,80}$/.test(invoiceId)) {
+    return res.status(400).json({ error: "invoiceId must be 1-80 letters, numbers, _ or -." });
+  }
+  if (typeof amount !== "string" || !/^(?:0|[1-9]\\d*)(?:\\.\\d{1,18})?$/.test(amount) || Number(amount) <= 0) {
+    return res.status(400).json({ error: "amount must be a positive decimal with at most 18 places." });
+  }
+  try {
+    insertInvoice.run(invoiceId, parseUnits(amount, 18).toString());
+    return res.status(201).json({ invoiceId, amount, currency: "VKT", status: "pending" });
+  } catch {
+    return res.status(409).json({ error: "Invoice ID already exists." });
+  }
+});
+
+app.post("/v1/payments/verify", async (req, res) => {
+  const { invoiceId, transactionHash } = req.body || {};
+  if (typeof invoiceId !== "string" || typeof transactionHash !== "string" || !/^0x[a-fA-F0-9]{64}$/.test(transactionHash)) {
+    return res.status(400).json({ error: "A valid invoiceId and transactionHash are required." });
+  }
+  const invoice = getInvoice.get(invoiceId);
+  if (!invoice) return res.status(404).json({ error: "Invoice not found." });
+  if (invoice.status === "paid") {
+    return res.json({ invoiceId, status: "paid", transactionHash: invoice.transaction_hash });
+  }
+  const reused = getByHash.get(transactionHash.toLowerCase());
+  if (reused) return res.status(409).json({ error: "Transaction hash has already been assigned to an invoice." });
+
+  try {
+    const network = await provider.getNetwork();
+    if (Number(network.chainId) !== 97) throw new Error("RPC endpoint is not BNB Smart Chain Testnet.");
+    const code = await provider.getCode(tokenAddress);
+    if (code === "0x") return res.status(503).json({ error: "Configured VKT contract has no code on testnet." });
+    const receipt = await provider.getTransactionReceipt(transactionHash);
+    if (!receipt) return res.status(202).json({ status: "pending", message: "Transaction is not mined yet." });
+    if (receipt.status !== 1) return res.status(422).json({ error: "Transaction failed on-chain." });
+    const head = await provider.getBlockNumber();
+    if (head - receipt.blockNumber + 1 < minConfirmations) {
+      return res.status(202).json({ status: "confirming", confirmations: head - receipt.blockNumber + 1, required: minConfirmations });
+    }
+
+    let matched = false;
+    for (const log of receipt.logs) {
+      if (log.address.toLowerCase() !== tokenAddress.toLowerCase()) continue;
+      try {
+        const parsed = iface.parseLog(log);
+        if (parsed?.name === "Transfer" &&
+            getAddress(parsed.args.to) === merchantAddress &&
+            parsed.args.value.toString() === invoice.amount_wei) {
+          matched = true;
+          break;
+        }
+      } catch { /* Ignore unrelated or malformed logs. */ }
+    }
+    if (!matched) return res.status(422).json({ error: "No matching VKT Transfer to the configured merchant for this invoice amount." });
+    const changed = markPaid.run(transactionHash.toLowerCase(), invoiceId);
+    if (changed.changes !== 1) return res.status(409).json({ error: "Invoice was already processed; reload its status." });
+    return res.json({ invoiceId, status: "paid", transactionHash, confirmations: head - receipt.blockNumber + 1 });
+  } catch (error) {
+    return res.status(502).json({ error: "Could not verify the transaction.", detail: error.message });
+  }
+});
+
+app.listen(Number(process.env.PORT || 8787), () => {
+  console.log(`VKT testnet verifier listening on port ${process.env.PORT || 8787}`);
+});
