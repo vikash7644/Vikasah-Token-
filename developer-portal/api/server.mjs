@@ -1,7 +1,7 @@
 import "dotenv/config";
 import express from "express";
 import Database from "better-sqlite3";
-import { Contract, Interface, JsonRpcProvider, getAddress, isAddress, parseUnits } from "ethers";
+import { Interface, JsonRpcProvider, getAddress, isAddress, parseUnits } from "ethers";
 
 const required = ["BSC_TESTNET_RPC_URL", "VKT_TOKEN_ADDRESS", "VKT_MERCHANT_ADDRESS", "MERCHANT_API_KEY"];
 for (const key of required) if (!process.env[key]) throw new Error(`Missing environment variable: ${key}`);
@@ -19,6 +19,7 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS invoices (
     id TEXT PRIMARY KEY,
     amount_wei TEXT NOT NULL,
+    payer_address TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'pending',
     transaction_hash TEXT UNIQUE,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -88,6 +89,7 @@ app.post("/v1/payments/verify", async (req, res) => {
       try {
         const parsed = iface.parseLog(log);
         if (parsed?.name === "Transfer" &&
+            getAddress(parsed.args.from) === invoice.payer_address &&
             getAddress(parsed.args.to) === merchantAddress &&
             parsed.args.value.toString() === invoice.amount_wei) {
           matched = true;
@@ -95,7 +97,7 @@ app.post("/v1/payments/verify", async (req, res) => {
         }
       } catch { /* Ignore unrelated or malformed logs. */ }
     }
-    if (!matched) return res.status(422).json({ error: "No matching VKT Transfer to the configured merchant for this invoice amount." });
+    if (!matched) return res.status(422).json({ error: "No matching VKT Transfer from the expected payer to the configured merchant for this invoice amount." });
     const changed = markPaid.run(transactionHash.toLowerCase(), invoiceId);
     if (changed.changes !== 1) return res.status(409).json({ error: "Invoice was already processed; reload its status." });
     return res.json({ invoiceId, status: "paid", transactionHash, confirmations: head - receipt.blockNumber + 1 });
