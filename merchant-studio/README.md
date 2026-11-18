@@ -69,3 +69,6 @@ The proxy and server integration tests use a mocked upstream API; they cover rou
 - External ethers.js and QRCode.js scripts are loaded from CDNs; pin and self-host audited copies before production.
 
 **Not production-ready. BNB testnet only. Do not use real funds or claim mainnet support.**
+## Related VKT transparency tool
+
+The [VKT Treasury & Allocation Monitor (PR #4)](https://github.com/vikash7644/Vikasah-Token-/pull/4) is a separate, read-only dashboard for checking total supply and the configured owner-allocation and distribution-reserve wallet balances at one pinned BNB Testnet block. It does not verify invoices or payments and cannot move tokens. Use only the verified token contract and receiver addresses from the deployment record; do not treat the initial 30% / 70% allocation design as proof of wallet ownership. PR #4 is a separate draft and is not included in this Merchant Studio branch.
