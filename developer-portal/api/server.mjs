@@ -1,10 +1,20 @@
 import "dotenv/config";
+import { timingSafeEqual } from "node:crypto";
 import express from "express";
 import Database from "better-sqlite3";
 import { Interface, JsonRpcProvider, getAddress, isAddress, parseUnits } from "ethers";
 
 const required = ["BSC_TESTNET_RPC_URL", "VKT_TOKEN_ADDRESS", "VKT_MERCHANT_ADDRESS", "MERCHANT_API_KEY"];
 for (const key of required) if (!process.env[key]) throw new Error(`Missing environment variable: ${key}`);
+if (Buffer.byteLength(process.env.MERCHANT_API_KEY, "utf8") < 32) {
+  throw new Error("MERCHANT_API_KEY must contain at least 32 bytes of random secret material.");
+}
+const merchantApiKey = Buffer.from(process.env.MERCHANT_API_KEY, "utf8");
+function hasValidMerchantApiKey(header) {
+  if (typeof header !== "string") return false;
+  const supplied = Buffer.from(header, "utf8");
+  return supplied.length === merchantApiKey.length && timingSafeEqual(supplied, merchantApiKey);
+}
 if (!isAddress(process.env.VKT_TOKEN_ADDRESS) || !isAddress(process.env.VKT_MERCHANT_ADDRESS)) {
   throw new Error("VKT_TOKEN_ADDRESS and VKT_MERCHANT_ADDRESS must be valid addresses.");
 }
@@ -57,7 +67,9 @@ app.use(express.json({ limit: "16kb" }));
 app.get("/health", (_req, res) => res.json({ ok: true, network: "bsc-testnet", chainId: 97 }));
 
 app.post("/v1/invoices", (req, res) => {
-  if (req.get("authorization") !== `Bearer ${process.env.MERCHANT_API_KEY}`) {
+  const authorization = req.get("authorization");
+  const suppliedKey = authorization?.startsWith("Bearer ") ? authorization.slice(7) : undefined;
+  if (!hasValidMerchantApiKey(suppliedKey)) {
     return res.status(401).json({ error: "Unauthorized" });
   }
   const { invoiceId, amount, payerAddress } = req.body || {};
