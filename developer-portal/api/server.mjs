@@ -2,7 +2,7 @@ import "dotenv/config";
 import { timingSafeEqual } from "node:crypto";
 import express from "express";
 import Database from "better-sqlite3";
-import { Interface, JsonRpcProvider, getAddress, isAddress, parseUnits } from "ethers";
+import { Interface, JsonRpcProvider, formatUnits, getAddress, isAddress, parseUnits } from "ethers";
 
 const required = ["BSC_TESTNET_RPC_URL", "VKT_TOKEN_ADDRESS", "VKT_MERCHANT_ADDRESS", "MERCHANT_API_KEY"];
 for (const key of required) if (!process.env[key]) throw new Error(`Missing environment variable: ${key}`);
@@ -170,6 +170,29 @@ app.post("/v1/invoices", (req, res) => {
     }
     return res.status(500).json({ error: "Could not create the invoice." });
   }
+});
+
+app.get("/v1/invoices/:invoiceId", (req, res) => {
+  const authorization = req.get("authorization");
+  const bearerMatch = typeof authorization === "string" ? authorization.match(/^Bearer (\\S+)$/i) : null;
+  if (!hasValidMerchantApiKey(bearerMatch?.[1])) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  const { invoiceId } = req.params;
+  if (!/^[a-zA-Z0-9_-]{1,80}$/.test(invoiceId)) {
+    return res.status(400).json({ error: "A valid invoiceId is required." });
+  }
+  const invoice = getInvoice.get(invoiceId);
+  if (!invoice) return res.status(404).json({ error: "Invoice not found." });
+  return res.json({
+    invoiceId: invoice.id,
+    amount: formatUnits(invoice.amount_wei, 18),
+    currency: "VKT",
+    payerAddress: invoice.payer_address,
+    status: invoice.status,
+    transactionHash: invoice.transaction_hash,
+    createdAt: invoice.created_at
+  });
 });
 
 app.post("/v1/payments/verify", async (req, res) => {
