@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   BNB_TESTNET_CHAIN_ID,
+  assertSameBlock,
   buildSnapshot,
   formatUnits,
   isValidAddress,
@@ -61,4 +62,10 @@ test("exports a JSON-safe snapshot with raw integer balances and provenance warn
   assert.equal(snapshot.ownerBalanceRaw, "300");
   assert.match(snapshot.note, /user-supplied/);
   assert.doesNotThrow(() => JSON.stringify(snapshot));
+});
+
+test("rejects a block hash change during snapshot collection", () => {
+  const hash = "0x" + "b".repeat(64);
+  assert.equal(assertSameBlock(hash, hash.toUpperCase()), true);
+  assert.throws(() => assertSameBlock(hash, "0x" + "c".repeat(64)), /reorganization/);
 });
