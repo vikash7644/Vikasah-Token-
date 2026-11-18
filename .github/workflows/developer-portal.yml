@@ -27,6 +27,7 @@ jobs:
           node --check developer-portal/api/server.mjs
           node --check developer-portal/api/backup.mjs
           node --check developer-portal/api/reconcile.mjs
+          node --check developer-portal/api/restore.mjs
       - name: Install SDK dependencies
         working-directory: developer-portal/sdk
         run: npm install --ignore-scripts --no-audit --no-fund
