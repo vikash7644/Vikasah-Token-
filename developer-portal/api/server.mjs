@@ -126,13 +126,6 @@ app.post("/v1/invoices", (req, res) => {
 });
 
 app.post("/v1/payments/verify", async (req, res) => {
-  const now = Date.now();
-  const rate = consumeVerifyRateLimit.get(now, now - 60_000, now - 60_000);
-  if (rate.request_count > verifyRateLimit) {
-    const retryAfter = Math.max(1, Math.ceil((rate.window_started_at + 60_000 - now) / 1000));
-    res.set("Retry-After", String(retryAfter));
-    return res.status(429).json({ error: "Verification rate limit exceeded. Retry later." });
-  }
   const { invoiceId, transactionHash } = req.body || {};
   if (typeof invoiceId !== "string" || !/^[a-zA-Z0-9_-]{1,80}$/.test(invoiceId) ||
       typeof transactionHash !== "string" || !/^0x[a-fA-F0-9]{64}$/.test(transactionHash)) {
@@ -140,6 +133,13 @@ app.post("/v1/payments/verify", async (req, res) => {
   }
   let invoice = getInvoice.get(invoiceId);
   if (!invoice) return res.status(404).json({ error: "Invoice not found." });
+  const now = Date.now();
+  const rate = consumeVerifyRateLimit.get(now, now - 60_000, now - 60_000);
+  if (rate.request_count > verifyRateLimit) {
+    const retryAfter = Math.max(1, Math.ceil((rate.window_started_at + 60_000 - now) / 1000));
+    res.set("Retry-After", String(retryAfter));
+    return res.status(429).json({ error: "Verification rate limit exceeded. Retry later." });
+  }
   try {
     const network = await provider.getNetwork();
     if (Number(network.chainId) !== 97) throw new Error("RPC endpoint is not BNB Smart Chain Testnet.");
