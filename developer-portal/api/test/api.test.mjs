@@ -130,6 +130,18 @@ test("invoice creation validates identifiers, payer and positive decimal amounts
   }
 });
 
+test("invoice creation rejects amounts above the fixed one-billion VKT cap", async () => {
+  const response = await fetch(`${baseUrl}/v1/invoices`, {
+    method: "POST",
+    headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({ invoiceId: "order-over-cap", amount: "1000000000.000000000000000001", payerAddress })
+  });
+  assert.equal(response.status, 400);
+  assert.deepEqual(await response.json(), {
+    error: "amount cannot exceed the fixed VKT maximum supply of 1000000000."
+  });
+});
+
 test("invoice creation accepts 18-decimal VKT amounts and rejects duplicate IDs", async () => {
   const headers = { "content-type": "application/json", authorization: `Bearer ${apiKey}` };
   const body = { invoiceId: "order-decimal-1", amount: "0.000000000000000001", payerAddress };
