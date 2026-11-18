@@ -34,7 +34,7 @@ Use a persistent disk and set both paths explicitly before running a backup:
 DATABASE_PATH=/var/data/vkt-payments.sqlite BACKUP_PATH=/var/data/backups/vkt-payments.sqlite npm run backup
 ```
 
-The backup command uses SQLite's online backup API, so it produces a consistent database snapshot while the service is running. Store copies outside the application disk as well; a backup on the same disk does not protect against disk loss. Schedule and monitor backups with your hosting provider or a separate trusted backup job. Do not commit database files.
+The backup command uses SQLite's online backup API, so it produces a consistent database snapshot while the service is running, then opens the snapshot read-only and runs `PRAGMA integrity_check` before reporting success. Store copies outside the application disk as well; a backup on the same disk does not protect against disk loss. Schedule and monitor backups with your hosting provider or a separate trusted backup job. Do not commit database files.
 
 ## Limitations and deployment checklist
 
