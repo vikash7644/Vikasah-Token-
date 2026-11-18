@@ -1,14 +1,11 @@
 const hre = require("hardhat");
 
 const EXPECTED_TESTNET_CHAIN_ID = 97n;
-const GAS_BUFFER_PERCENT = 120n;
 
-function requireAddress(label, value) {
-  if (!value || !hre.ethers.isAddress(value) || value.toLowerCase() === hre.ethers.ZeroAddress.toLowerCase()) {
-    throw new Error(`${label} must be a valid, non-zero EVM address.`);
-  }
-  return hre.ethers.getAddress(value);
-}
+const {
+  validateAllocationWallets,
+  calculateRequiredBalance
+} = require("./preflight-helpers");
 
 async function main() {
   const network = await hre.ethers.provider.getNetwork();
@@ -21,18 +18,15 @@ async function main() {
     throw new Error("No deployer configured. Set DEPLOYER_PRIVATE_KEY in the ignored .env file.");
   }
 
-  const owner = requireAddress("TOKEN_ADMIN_OWNER", process.env.TOKEN_ADMIN_OWNER);
-  const ownerAllocationReceiver = requireAddress(
-    "OWNER_ALLOCATION_RECEIVER",
-    process.env.OWNER_ALLOCATION_RECEIVER
-  );
-  const distributionReceiver = requireAddress(
-    "DISTRIBUTION_RESERVE_RECEIVER",
-    process.env.DISTRIBUTION_RESERVE_RECEIVER
-  );
-  if (ownerAllocationReceiver === distributionReceiver) {
-    throw new Error("Owner allocation and distribution reserve must use different wallets.");
-  }
+  const {
+    owner,
+    ownerAllocationReceiver,
+    distributionReceiver
+  } = validateAllocationWallets(hre.ethers, {
+    owner: process.env.TOKEN_ADMIN_OWNER,
+    ownerAllocationReceiver: process.env.OWNER_ALLOCATION_RECEIVER,
+    distributionReceiver: process.env.DISTRIBUTION_RESERVE_RECEIVER
+  });
 
   const factory = await hre.ethers.getContractFactory("VikasahToken", deployer);
   const deployment = await factory.getDeployTransaction(
@@ -51,7 +45,7 @@ async function main() {
   }
 
   const estimatedCost = gasLimit * gasPrice;
-  const requiredBalance = (estimatedCost * GAS_BUFFER_PERCENT + 99n) / 100n;
+  const requiredBalance = calculateRequiredBalance(gasLimit, gasPrice);
   const balance = await hre.ethers.provider.getBalance(deployer.address);
   if (balance < requiredBalance) {
     throw new Error(
