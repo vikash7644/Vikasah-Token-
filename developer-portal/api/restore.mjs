@@ -1,5 +1,5 @@
 import { copyFile, mkdir, rm } from "node:fs/promises";
-import { dirname } from "node:path";
+import { dirname, resolve } from "node:path";
 import Database from "better-sqlite3";
 
 const [backupArgument, destinationArgument] = process.argv.slice(2);
