@@ -33,6 +33,15 @@ export function mountVktMerchantProxy(app, {
     return { status: response.status, payload };
   }
 
+  app.get("/api/vkt/config", async (_req, res) => {
+    try {
+      const result = await upstream("/v1/config");
+      return res.status(result.status).json(result.payload);
+    } catch {
+      return res.status(502).json({ error: "VKT network configuration is unavailable. Retry later." });
+    }
+  });
+
   app.post("/api/vkt/invoices", async (req, res) => {
     const { invoiceId, amount, payerAddress } = req.body || {};
     if (typeof invoiceId !== "string" || !invoicePattern.test(invoiceId) ||
