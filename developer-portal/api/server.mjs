@@ -124,6 +124,23 @@ app.use(express.json({ limit: "16kb" }));
 
 app.get("/health", (_req, res) => res.json({ ok: true, network: "bsc-testnet", chainId: 97 }));
 
+app.get("/ready", async (_req, res) => {
+  try {
+    db.prepare("SELECT 1").get();
+    const network = await provider.getNetwork();
+    if (Number(network.chainId) !== 97) {
+      return res.status(503).json({ ok: false, ready: false, reason: "Configured RPC is not BNB Smart Chain Testnet." });
+    }
+    const code = await provider.getCode(tokenAddress);
+    if (code === "0x") {
+      return res.status(503).json({ ok: false, ready: false, reason: "Configured token contract has no code on testnet." });
+    }
+    return res.json({ ok: true, ready: true, network: "bsc-testnet", chainId: 97 });
+  } catch {
+    return res.status(503).json({ ok: false, ready: false, reason: "Database or testnet RPC is not ready." });
+  }
+});
+
 app.post("/v1/invoices", (req, res) => {
   const authorization = req.get("authorization");
   const bearerMatch = typeof authorization === "string" ? authorization.match(/^Bearer (\S+)$/i) : null;
