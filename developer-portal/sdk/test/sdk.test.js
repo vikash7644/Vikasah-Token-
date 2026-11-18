@@ -100,3 +100,22 @@ test("rejects malformed invoice identifiers before making a request", async () =
     /valid API URL, invoice ID/
   );
 });
+
+test("rejects an invalid Passport address before lock submission", async () => {
+  await assert.rejects(
+    lockVktInPassport({ signer, passportAddress: "0x1234", amount: "1" }),
+    /Passport address must be a valid EVM address/
+  );
+});
+
+test("rejects invalid VKT address before Passport approval", async () => {
+  await assert.rejects(
+    approveVktForPassport({
+      signer,
+      tokenAddress: "0x1234",
+      passportAddress: validMerchant,
+      amount: "1"
+    }),
+    /VKT token address must be a valid EVM address/
+  );
+});
