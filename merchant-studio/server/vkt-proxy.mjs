@@ -2,6 +2,11 @@ const invoicePattern = /^[a-zA-Z0-9_-]{1,80}$/;
 const transactionPattern = /^0x[a-fA-F0-9]{64}$/;
 const amountPattern = /^(?:0|[1-9]\d*)(?:\.\d{1,18})?$/;
 
+function amountToWei(amount) {
+  const [whole, fraction = ""] = amount.split(".");
+  return BigInt(whole) * 10n ** 18n + BigInt((fraction + "0".repeat(18)).slice(0, 18));
+}
+
 function normalizeApiUrl(value) {
   let url;
   try { url = new URL(value); } catch { throw new Error("VKT_API_BASE_URL must be a valid HTTPS URL."); }
@@ -51,8 +56,7 @@ export function mountVktMerchantProxy(app, {
       return res.status(400).json({ error: "A valid invoiceId, positive decimal amount and non-zero payerAddress are required." });
     }
     try {
-      const [whole, fraction = ""] = amount.split(".");
-      const amountWei = BigInt(whole) * 10n ** 18n + BigInt((fraction + "0".repeat(18)).slice(0, 18));
+      const amountWei = amountToWei(amount);
       if (amountWei <= 0n || amountWei > 1_000_000_000n * 10n ** 18n) {
         return res.status(400).json({ error: "Invoice amount must be greater than zero and no more than 1,000,000,000 VKT." });
       }
@@ -61,6 +65,29 @@ export function mountVktMerchantProxy(app, {
         headers: { "content-type": "application/json", authorization: "Bearer " + merchantApiKey },
         body: JSON.stringify({ invoiceId, amount, payerAddress })
       });
+      if (result.status === 409) {
+        const existing = await upstream("/v1/invoices/" + encodeURIComponent(invoiceId), {
+          headers: { authorization: "Bearer " + merchantApiKey }
+        });
+        if (
+          existing.status === 200 &&
+          existing.payload.status === "pending" &&
+          typeof existing.payload.payerAddress === "string" &&
+          existing.payload.payerAddress.toLowerCase() === payerAddress.toLowerCase() &&
+          typeof existing.payload.amount === "string" &&
+          amountPattern.test(existing.payload.amount) &&
+          amountToWei(existing.payload.amount) === amountWei
+        ) {
+          return res.status(200).json({
+            invoiceId,
+            amount: existing.payload.amount,
+            currency: "VKT",
+            status: "pending",
+            reused: true
+          });
+        }
+        return res.status(409).json({ error: "Invoice ID already exists with different details or is already paid." });
+      }
       return res.status(result.status).json(result.payload);
     } catch {
       return res.status(502).json({ error: "VKT invoice service is unavailable. Retry later." });
@@ -75,6 +102,11 @@ export function mountVktMerchantProxy(app, {
       const result = await upstream("/v1/invoices/" + encodeURIComponent(req.params.invoiceId), {
         headers: { authorization: "Bearer " + merchantApiKey }
       });
+      res.set("Cache-Control", "no-store");
+      if (result.status === 200) {
+        const { payerAddress: _privatePayerAddress, ...publicInvoice } = result.payload;
+        return res.status(200).json(publicInvoice);
+      }
       return res.status(result.status).json(result.payload);
     } catch {
       return res.status(502).json({ error: "VKT invoice service is unavailable. Retry later." });
