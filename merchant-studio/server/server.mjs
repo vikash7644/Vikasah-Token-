@@ -26,10 +26,27 @@ mountVktMerchantProxy(app, { apiBaseUrl, merchantApiKey });
 app.get("/health", (_req, res) => res.json({ ok: true, service: "vkt-merchant-studio" }));
 app.get("/ready", async (_req, res) => {
   try {
-    const response = await fetch(new URL("/v1/config", apiBaseUrl), { signal: AbortSignal.timeout(5_000) });
-    const config = await response.json().catch(() => ({}));
-    if (!response.ok || config.chainId !== 97 || !config.tokenAddress || !config.merchantAddress) {
-      return res.status(503).json({ ok: false, ready: false, reason: "VKT testnet verifier configuration is unavailable." });
+    const [configResponse, readinessResponse] = await Promise.all([
+      fetch(new URL("/v1/config", apiBaseUrl), { signal: AbortSignal.timeout(5_000) }),
+      fetch(new URL("/ready", apiBaseUrl), { signal: AbortSignal.timeout(5_000) })
+    ]);
+    const [config, readiness] = await Promise.all([
+      configResponse.json().catch(() => ({})),
+      readinessResponse.json().catch(() => ({}))
+    ]);
+    if (
+      !configResponse.ok ||
+      config.chainId !== 97 ||
+      !config.tokenAddress ||
+      !config.merchantAddress ||
+      !readinessResponse.ok ||
+      readiness.ready !== true
+    ) {
+      return res.status(503).json({
+        ok: false,
+        ready: false,
+        reason: "VKT verifier database, BNB testnet RPC or deployed token contract is not ready."
+      });
     }
     return res.json({ ok: true, ready: true, chainId: 97, network: "bsc-testnet" });
   } catch {
