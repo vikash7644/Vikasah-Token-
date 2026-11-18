@@ -7,12 +7,12 @@ A single-merchant Node.js API that creates invoices and independently verifies V
 ```sh
 cp .env.example .env
 # Set a real testnet RPC URL, deployed VKT contract address, merchant wallet,
-# and a long random MERCHANT_API_KEY. Do not use placeholder addresses.
+# and a cryptographically random MERCHANT_API_KEY of at least 32 bytes. Do not use placeholder addresses.
 npm install
 npm start
 ```
 
-The server loads `.env` automatically. Never commit it.
+The server loads `.env` automatically. Never commit it. Startup rejects merchant API keys shorter than 32 bytes; use a password manager or cryptographic random generator to create one.
 
 ## API
 
