@@ -111,3 +111,14 @@ export function snapshotToCsv(snapshot) {
     return '"' + text.replace(/"/g, '""') + '"';
   }).join(",")).join("\r\n") + "\r\n";
 }
+
+export function parseBlockTimestamp(hexValue) {
+  if (typeof hexValue !== "string" || !/^0x[0-9a-f]+$/i.test(hexValue)) {
+    throw new Error("RPC returned an invalid block timestamp.");
+  }
+  const seconds = BigInt(hexValue);
+  if (seconds <= 0n || seconds > 253402300799n) {
+    throw new Error("RPC returned a block timestamp outside the supported date range.");
+  }
+  return new Date(Number(seconds) * 1000).toISOString();
+}
