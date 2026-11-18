@@ -37,10 +37,22 @@ export async function payVkt({ signer, tokenAddress, merchantAddress, amount }) 
 
 /** Requests server-side receipt verification; the server must independently validate the invoice. */
 export async function verifyVktPayment({ apiBaseUrl, invoiceId, transactionHash }) {
-  if (!apiBaseUrl || !invoiceId || !/^0x[a-fA-F0-9]{64}$/.test(transactionHash)) {
-    throw new Error("apiBaseUrl, invoiceId and a valid transaction hash are required.");
+  if (typeof apiBaseUrl !== "string" || typeof invoiceId !== "string" ||
+      !/^[a-zA-Z0-9_-]{1,80}$/.test(invoiceId) ||
+      typeof transactionHash !== "string" || !/^0x[a-fA-F0-9]{64}$/.test(transactionHash)) {
+    throw new Error("A valid API URL, invoice ID and transaction hash are required.");
   }
-  const response = await fetch(new URL("/v1/payments/verify", apiBaseUrl), {
+  let endpoint;
+  try {
+    const base = new URL(apiBaseUrl);
+    const localHttp = base.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(base.hostname);
+    if (base.protocol !== "https:" && !localHttp) throw new Error("HTTPS is required.");
+    if (base.username || base.password) throw new Error("Credentials are not allowed in the API URL.");
+    endpoint = new URL("/v1/payments/verify", base);
+  } catch {
+    throw new Error("apiBaseUrl must be a valid HTTPS URL (HTTP is allowed only for localhost).");
+  }
+  const response = await fetch(endpoint, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ invoiceId, transactionHash })
@@ -99,7 +111,10 @@ function requireContractAddress(label, value) {
 }
 
 function requirePositiveTokenAmount(value) {
-  const amountText = String(value);
+  if (typeof value !== "string") {
+    throw new Error("Amount must be supplied as a decimal string to avoid floating-point precision loss.");
+  }
+  const amountText = value;
   if (!/^(?:0|[1-9]\d*)(?:\.\d{1,18})?$/.test(amountText) || !/[1-9]/.test(amountText)) {
     throw new Error("Amount must be a positive decimal with at most 18 places.");
   }
