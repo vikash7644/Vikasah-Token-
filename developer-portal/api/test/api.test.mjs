@@ -156,6 +156,21 @@ test("payment verification rejects malformed transaction hashes before RPC acces
   });
 });
 
+test("payment verification rejects malformed invoice IDs before database or RPC access", async () => {
+  const response = await fetch(`${baseUrl}/v1/payments/verify`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      invoiceId: "../invalid",
+      transactionHash: `0x${"a".repeat(64)}`
+    })
+  });
+  assert.equal(response.status, 400);
+  assert.deepEqual(await response.json(), {
+    error: "A valid invoiceId and transactionHash are required."
+  });
+});
+
 test("payment verification returns 404 for unknown invoices", async () => {
   const response = await fetch(`${baseUrl}/v1/payments/verify`, {
     method: "POST",
