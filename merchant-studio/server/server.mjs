@@ -56,7 +56,7 @@ app.get("/ready", async (_req, res) => {
 
 const here = dirname(fileURLToPath(import.meta.url));
 const staticRoot = resolve(here, "..");
-app.use("/server", (_req, res) => res.sendStatus(404));
+app.use(["/server", "/test"], (_req, res) => res.sendStatus(404));
 app.use(express.static(staticRoot, { dotfiles: "deny", index: "index.html", etag: true }));
 app.use((error, _req, res, _next) => {
   if (error?.type === "entity.too.large") return res.status(413).json({ error: "Request body is too large." });
