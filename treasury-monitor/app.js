@@ -73,14 +73,15 @@ async function load() {
     validateSupply({ supply, ownerBalance, reserveBalance, decimals });
 
     latestSnapshot = buildSnapshot({
-      token, owner, reserve, blockNumber, blockHash: block.hash, decimals, supply, ownerBalance, reserveBalance,
-      timestamp: new Date().toISOString()
+      token, owner, reserve, blockNumber, blockHash: block.hash,
+      blockTimestamp: new Date(Number(BigInt(block.timestamp)) * 1000).toISOString(),
+      decimals, supply, ownerBalance, reserveBalance, timestamp: new Date().toISOString()
     });
     $("total").textContent = formatUnits(supply, decimals) + " VKT";
     $("total-sub").textContent = "On-chain total supply · " + decimals + " decimals";
     $("owner-balance").textContent = formatUnits(ownerBalance, decimals) + " VKT";
     $("reserve-balance").textContent = formatUnits(reserveBalance, decimals) + " VKT";
-    $("block").textContent = "Snapshot block: " + blockNumber.toLocaleString("en-US");
+    $("block").textContent = "Block " + blockNumber.toLocaleString("en-US") + " · chain time " + latestSnapshot.blockTimestamp;
     $("export").disabled = false;
     $("export-csv").disabled = false;
     status.textContent = "Verified RPC response · BNB Testnet · updated " + new Date().toLocaleTimeString();
