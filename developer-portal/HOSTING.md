@@ -42,13 +42,15 @@ Never put `MERCHANT_API_KEY`, wallet private keys, or seed phrases in the static
 3. Verify the contract address and ownership/allocation on-chain.
 4. Create the cloud API service and persistent disk; configure the environment variables above.
 5. Confirm `/health` reports chain ID 97 and the service stays healthy after a restart.
-6. Create a small test invoice and verify a real wallet-signed testnet transfer end-to-end.
-7. Test duplicate submissions, wrong payer, wrong amount, insufficient confirmations, service restart, backup restore, and reorg reconciliation.
-8. Only after independent security review should production hosting or mainnet be considered.
+6. Run `npm run backup` with the source and destination on the persistent disk, then copy the backup to separate storage and perform a restore drill.
+7. Create a small test invoice and verify a real wallet-signed testnet transfer end-to-end.
+8. Test duplicate submissions, wrong payer, wrong amount, insufficient confirmations, service restart, backup restore, rate limiting, and reorg reconciliation.
+9. Only after independent security review should production hosting or mainnet be considered.
 
 ## Current blockers
 
 - The VKT token contract has not been deployed, so there is no verified contract address to configure.
 - The API is a single-merchant testnet starter, not a production payment processor.
-- Periodic reconciliation, stronger finality handling, rate limiting, monitoring/alerts, backup-restore drills, webhook delivery, merchant authentication lifecycle, and independent security review remain required.
+- Periodic reconciliation, stronger finality handling, monitoring/alerts, off-disk scheduled backups and restore drills, webhook delivery, merchant authentication lifecycle, and independent security review remain required. The current verification rate limit is service-wide and SQLite-backed for this single-instance starter; it is not a distributed multi-instance limiter.
+- The backup command creates a consistent SQLite snapshot, but scheduling, off-disk retention, encryption, and restore verification must be configured operationally.
 - No cloud service, persistent disk, domain, or paid plan has been created by this repository change.
