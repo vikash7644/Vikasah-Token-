@@ -16,7 +16,7 @@ A non-custodial VKT checkout interface for BNB Smart Chain Testnet (chain ID 97)
 
 The status API key is deliberately kept on the server. Do not add `MERCHANT_API_KEY` to browser JavaScript, HTML, local storage, or a public Vercel environment variable.
 
-1. Deploy the VKT Payment Verifier API separately and configure its persistent SQLite database and BNB testnet RPC.
+1. Review and merge/deploy the matching [VKT Payment Verifier API PR #3](https://github.com/vikash7644/Vikasah-Token-/pull/3) separately; configure its persistent SQLite database and BNB testnet RPC. PR #3 is a separate draft and is not automatically included by this Merchant Studio PR.
 2. From this folder, install the server dependencies:
 
    ```sh
