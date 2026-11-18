@@ -1,0 +1,9 @@
+{
+  "appId": "com.vikasah.merchantstudio",
+  "appName": "VKT Merchant Studio",
+  "webDir": "merchant-studio",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https"
+  }
+}
