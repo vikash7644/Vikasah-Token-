@@ -50,12 +50,13 @@ test("enforces the fixed cap and aggregate wallet balance sanity check", () => {
 
 test("exports a JSON-safe snapshot with raw integer balances and provenance warning", () => {
   const snapshot = buildSnapshot({
-    token, owner, reserve, blockNumber: 123456,
+    token, owner, reserve, blockNumber: 123456, blockHash: "0x" + "a".repeat(64),
     decimals: 18, supply: 1000n, ownerBalance: 300n, reserveBalance: 700n,
     timestamp: "2026-11-18T09:00:00.000Z"
   });
   assert.equal(snapshot.chainId, 97);
   assert.equal(snapshot.blockNumber, 123456);
+  assert.equal(snapshot.blockHash, "0x" + "a".repeat(64));
   assert.equal(snapshot.totalSupplyRaw, "1000");
   assert.equal(snapshot.ownerBalanceRaw, "300");
   assert.match(snapshot.note, /user-supplied/);
