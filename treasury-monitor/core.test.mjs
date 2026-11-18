@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   BNB_TESTNET_CHAIN_ID,
   assertSameBlock,
+  snapshotToCsv,
   buildSnapshot,
   formatUnits,
   isValidAddress,
@@ -68,4 +69,17 @@ test("rejects a block hash change during snapshot collection", () => {
   const hash = "0x" + "b".repeat(64);
   assert.equal(assertSameBlock(hash, hash.toUpperCase()), true);
   assert.throws(() => assertSameBlock(hash, "0x" + "c".repeat(64)), /reorganization/);
+});
+
+test("exports a quoted CSV with raw integer amounts", () => {
+  const snapshot = buildSnapshot({
+    token, owner, reserve, blockNumber: 123, blockHash: "0x" + "d".repeat(64),
+    decimals: 18, supply: 1000n, ownerBalance: 300n, reserveBalance: 700n,
+    timestamp: "2026-11-18T09:00:00.000Z"
+  });
+  const csv = snapshotToCsv(snapshot);
+  assert.match(csv, /"totalSupplyRaw","1000"/);
+  assert.match(csv, /"ownerBalanceRaw","300"/);
+  assert.match(csv, /"reserveBalanceRaw","700"/);
+  assert.ok(csv.endsWith("\\r\\n"));
 });
