@@ -52,3 +52,24 @@ export function validateSupply({ supply, ownerBalance, reserveBalance, decimals 
   }
   return true;
 }
+
+export function buildSnapshot({ token, owner, reserve, blockNumber, decimals, supply, ownerBalance, reserveBalance, timestamp }) {
+  return {
+    schema: "vkt-treasury-snapshot/v1",
+    network: "BNB Smart Chain Testnet",
+    chainId: 97,
+    capturedAt: timestamp,
+    blockNumber,
+    tokenContract: token,
+    ownerAllocationWallet: owner,
+    distributionReserveWallet: reserve,
+    decimals,
+    totalSupplyRaw: String(supply),
+    totalSupply: formatUnits(supply, decimals),
+    ownerBalanceRaw: String(ownerBalance),
+    ownerBalance: formatUnits(ownerBalance, decimals),
+    reserveBalanceRaw: String(reserveBalance),
+    reserveBalance: formatUnits(reserveBalance, decimals),
+    note: "Read-only RPC snapshot. Wallet labels are user-supplied and must be verified against deployment records. Not an audited financial statement."
+  };
+}
