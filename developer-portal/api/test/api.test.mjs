@@ -110,7 +110,13 @@ test("CORS allowlist does not replace merchant API authentication", async () => 
   assert.equal(response.headers.get("access-control-allow-origin"), "https://merchant.example");
 });
 
-test("readiness endpoint fails closed when the testnet RPC is unavailable", async () => {\n  const response = await fetch(`${baseUrl}/ready`);\n  assert.equal(response.status, 503);\n  assert.deepEqual(await response.json(), { ok: false, ready: false, reason: "Database or testnet RPC is not ready." });\n});\n\ntest("health endpoint identifies BNB Smart Chain Testnet", async () => {
+test("readiness endpoint fails closed when the testnet RPC is unavailable", async () => {
+  const response = await fetch(`${baseUrl}/ready`);
+  assert.equal(response.status, 503);
+  assert.deepEqual(await response.json(), { ok: false, ready: false, reason: "Database or testnet RPC is not ready." });
+});
+
+test("health endpoint identifies BNB Smart Chain Testnet", async () => {
   const response = await fetch(`${baseUrl}/health`);
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), { ok: true, network: "bsc-testnet", chainId: 97 });
