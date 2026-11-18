@@ -16,7 +16,7 @@ The server loads `.env` automatically. Never commit it. Startup rejects merchant
 
 ## API
 
-- `GET /health` — service/network health.
+- `GET /health` — process liveness only.\n- `GET /ready` — dependency readiness; checks SQLite access, BNB testnet chain ID 97, and configured token contract bytecode, returning HTTP 503 when a dependency is unavailable.
 - `POST /v1/invoices` — create an invoice; requires `Authorization: Bearer <MERCHANT_API_KEY>` and JSON `{"invoiceId":"order-123","amount":"5.25","payerAddress":"0xCUSTOMER_WALLET"}`.
 - `POST /v1/payments/verify` — verify JSON `{"invoiceId":"order-123","transactionHash":"0x..."}`. This endpoint has a persistent service-wide limit of 120 requests per rolling minute by default; set `VERIFY_RATE_LIMIT_PER_MINUTE` to a positive integer to tune it. A limit response is HTTP 429 with `Retry-After`.
 
