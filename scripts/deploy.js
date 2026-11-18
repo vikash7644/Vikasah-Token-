@@ -1,12 +1,23 @@
 const hre = require("hardhat");
+const fs = require("node:fs");
+const path = require("node:path");
 
 const EXPECTED_TESTNET_CHAIN_ID = 97n;
 
 function requireAddress(label, value) {
-  if (!value || !hre.ethers.isAddress(value) || value === hre.ethers.ZeroAddress) {
+  if (!value || !hre.ethers.isAddress(value) || value.toLowerCase() === hre.ethers.ZeroAddress.toLowerCase()) {
     throw new Error(`${label} must be a valid, non-zero EVM address.`);
   }
   return hre.ethers.getAddress(value);
+}
+
+function saveDeploymentRecord(record) {
+  const recordPath = path.resolve(
+    process.env.DEPLOYMENT_RECORD_PATH || path.join("deployments", "bsc-testnet.json")
+  );
+  fs.mkdirSync(path.dirname(recordPath), { recursive: true });
+  fs.writeFileSync(recordPath, JSON.stringify(record, null, 2) + "\n", { mode: 0o600 });
+  console.log("Deployment record saved to:", recordPath);
 }
 
 async function main() {
@@ -47,6 +58,29 @@ async function main() {
   await token.waitForDeployment();
 
   const address = await token.getAddress();
+  const deploymentTx = token.deploymentTransaction();
+  if (!deploymentTx) throw new Error("Deployment transaction details are unavailable.");
+  const receipt = await deploymentTx.wait(1);
+  if (!receipt || receipt.status !== 1) {
+    throw new Error(`Deployment transaction ${deploymentTx.hash} did not produce a successful receipt.`);
+  }
+
+  const record = {
+    status: "deployed_unverified",
+    network: "bsc-testnet",
+    chainId: Number(network.chainId),
+    contract: "VikasahToken",
+    address,
+    transactionHash: receipt.hash,
+    blockNumber: receipt.blockNumber,
+    deployer: deployer.address,
+    adminOwner: owner,
+    ownerAllocationReceiver,
+    distributionReserveReceiver,
+    deployedAt: new Date().toISOString()
+  };
+  saveDeploymentRecord(record);
+
   const [ownerBalance, reserveBalance, supply] = await Promise.all([
     token.balanceOf(ownerAllocationReceiver),
     token.balanceOf(distributionReceiver),
@@ -61,14 +95,31 @@ async function main() {
     reserveBalance !== expectedReserve ||
     supply !== expectedSupply
   ) {
+    record.status = "allocation_invariant_failed";
+    record.observedOwnerAllocation = hre.ethers.formatUnits(ownerBalance, 18);
+    record.observedDistributionReserve = hre.ethers.formatUnits(reserveBalance, 18);
+    record.observedTotalSupply = hre.ethers.formatUnits(supply, 18);
+    saveDeploymentRecord(record);
     throw new Error("Post-deployment allocation invariant failed; do not proceed with launch.");
   }
 
+  Object.assign(record, {
+    status: "deployed_verified",
+    tokenName: await token.name(),
+    tokenSymbol: await token.symbol(),
+    decimals: Number(await token.decimals()),
+    ownerAllocation: hre.ethers.formatUnits(ownerBalance, 18),
+    distributionReserve: hre.ethers.formatUnits(reserveBalance, 18),
+    totalSupply: hre.ethers.formatUnits(supply, 18)
+  });
+  saveDeploymentRecord(record);
+
   console.log("Vikasah Token deployed at:", address);
-  console.log("Owner allocation:", hre.ethers.formatUnits(ownerBalance, 18), "VKT");
-  console.log("Distribution reserve:", hre.ethers.formatUnits(reserveBalance, 18), "VKT");
-  console.log("Total supply:", hre.ethers.formatUnits(supply, 18), "VKT");
-  console.log("Deployment preflight and allocation checks passed.");
+  console.log("Deployment transaction:", receipt.hash);
+  console.log("Owner allocation:", record.ownerAllocation, "VKT");
+  console.log("Distribution reserve:", record.distributionReserve, "VKT");
+  console.log("Total supply:", record.totalSupply, "VKT");
+  console.log("Deployment receipt and allocation invariants verified.");
 }
 
 main().catch((error) => {
