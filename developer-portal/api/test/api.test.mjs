@@ -50,6 +50,7 @@ before(async () => {
       VKT_MERCHANT_ADDRESS: merchantAddress,
       MERCHANT_API_KEY: apiKey,
       VERIFY_RATE_LIMIT_PER_MINUTE: "3",
+      CORS_ALLOWED_ORIGINS: "https://merchant.example",
       DATABASE_PATH: databasePath
     },
     stdio: "ignore"
@@ -80,6 +81,33 @@ test("startup migrates existing invoice databases with reorg tracking columns", 
   database.close();
   assert.equal(columns.has("block_number"), true);
   assert.equal(columns.has("block_hash"), true);
+});
+
+test("CORS preflight allows only explicitly configured HTTPS origins", async () => {
+  const allowed = await fetch(`${baseUrl}/v1/invoices`, {
+    method: "OPTIONS",
+    headers: { origin: "https://merchant.example", "access-control-request-method": "POST" }
+  });
+  assert.equal(allowed.status, 204);
+  assert.equal(allowed.headers.get("access-control-allow-origin"), "https://merchant.example");
+  assert.equal(allowed.headers.get("access-control-allow-methods"), "GET, POST, OPTIONS");
+
+  const blocked = await fetch(`${baseUrl}/v1/invoices`, {
+    method: "OPTIONS",
+    headers: { origin: "https://untrusted.example", "access-control-request-method": "POST" }
+  });
+  assert.equal(blocked.status, 403);
+  assert.deepEqual(await blocked.json(), { error: "Origin is not allowed." });
+});
+
+test("CORS allowlist does not replace merchant API authentication", async () => {
+  const response = await fetch(`${baseUrl}/v1/invoices`, {
+    method: "POST",
+    headers: { origin: "https://merchant.example", "content-type": "application/json" },
+    body: JSON.stringify({ invoiceId: "order-cors-no-auth", amount: "1", payerAddress })
+  });
+  assert.equal(response.status, 401);
+  assert.equal(response.headers.get("access-control-allow-origin"), "https://merchant.example");
 });
 
 test("health endpoint identifies BNB Smart Chain Testnet", async () => {
