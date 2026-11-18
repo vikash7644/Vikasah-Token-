@@ -19,6 +19,25 @@ function showInvoice(data,save=true){
 async function connect(){if(!window.ethereum)throw Error("No browser wallet found. Open this page in a wallet-enabled browser.");if(!window.ethers)throw Error("Wallet library is loading. Try again.");provider=new ethers.BrowserProvider(window.ethereum);await provider.send("eth_requestAccounts",[]);signer=await provider.getSigner();const address=await signer.getAddress();$("walletState").className="wallet-state connected";$("walletState").innerHTML='<span class="wallet-dot"></span><span>'+escapeHtml(fmtAddress(address))+'</span>';$("connectBtn").textContent=fmtAddress(address);return address;}
 async function ensureTestnet(){const n=await provider.getNetwork();if(n.chainId===97n)return;try{await window.ethereum.request({method:"wallet_switchEthereumChain",params:[{chainId:CHAIN_ID}]});}catch(err){if(err.code!==4902)throw err;await window.ethereum.request({method:"wallet_addEthereumChain",params:[CHAIN_PARAMS]});}provider=new ethers.BrowserProvider(window.ethereum);signer=await provider.getSigner();if((await provider.getNetwork()).chainId!==97n)throw Error("Switch wallet to BNB Smart Chain Testnet (chain ID 97).");}
 
+async function refreshInvoiceStatus(){
+ if(!invoice||!invoice.invoiceId)return;
+ try{
+  const response=await fetch("/api/vkt/invoices/"+encodeURIComponent(invoice.invoiceId));
+  if(!response.ok)return;
+  const status=await response.json().catch(()=>({}));
+  if(status.status==="paid"){
+   if(status.transactionHash)$("txHash").value=status.transactionHash;
+   $("payBtn").disabled=true;
+   $("payBtn").textContent="Payment verified";
+   $("verifyStatus").textContent="Invoice status: PAID · "+(status.amount||invoice.amount)+" VKT";
+   setStatus("Server confirms this invoice is already PAID.");
+  }else if(status.status==="pending"){
+   $("verifyStatus").textContent="Invoice status: PENDING";
+  }
+ }catch{
+  // A temporary status lookup failure must not change or imply payment state.
+ }
+}
 async function verifyTransaction(){
  const hash=$("txHash").value.trim(),out=$("verifyStatus");
  out.textContent="";out.style.color="var(--mint)";
@@ -46,6 +65,7 @@ async function verifyTransaction(){
 
 async function payInvoice(){
  if(!invoice)return;
+ let transactionSubmitted=false;
  try{
   $("payBtn").disabled=true;setStatus("Connecting wallet…");
   if(!signer)await connect();await ensureTestnet();
@@ -73,6 +93,7 @@ async function payInvoice(){
   setStatus("Confirm the VKT transfer in your wallet. Check recipient and amount before signing.");
   const tx=await contract.transfer(invoice.merchant,value);
   $("txHash").value=tx.hash;
+  transactionSubmitted=true;
   setStatus("Transaction sent: "+tx.hash+". Waiting for one block confirmation…");
   const receipt=await tx.wait(1);
   if(!receipt||receipt.status!==1)throw Error("Transaction was not successful on-chain.");
@@ -100,15 +121,20 @@ async function payInvoice(){
    $("payBtn").textContent="Payment verified";
    $("verifyStatus").textContent="Invoice status: PAID";
   }else{
-   setStatus("Transaction mined, but the server has not yet marked it paid. Use Verify transaction to retry. "+lastMessage,true);
-   $("payBtn").disabled=false;
+   setStatus("Transaction sent, but the server has not yet marked it paid. Do not pay again. Use Verify transaction to retry. "+lastMessage,true);
+   $("payBtn").disabled=true;
+   $("payBtn").textContent="Payment sent · verify status";
   }
- }catch(err){setStatus(err.shortMessage||err.message||"Payment failed.",true);$("payBtn").disabled=false;}
+ }catch(err){
+  setStatus((transactionSubmitted?"Transaction was already sent. Do not send another payment. Verify the saved transaction hash. ":"")+(err.shortMessage||err.message||"Payment failed."),true);
+  $("payBtn").disabled=transactionSubmitted;
+  if(transactionSubmitted)$("payBtn").textContent="Payment sent · verify status";
+ }
 }
 $("invoiceForm").addEventListener("submit",e=>{e.preventDefault();$("formError").textContent="";const merchant=$("merchantWallet").value.trim(),token=$("tokenAddress").value.trim(),amount=$("amount").value.trim();if(!validAddress(merchant)||!validAddress(token)){$("formError").textContent="Enter valid merchant and token contract addresses.";return;}try{const units=ethers.parseUnits(amount,18);if(units<=0n||units>MAX_INVOICE_VKT*10n**18n)throw Error("Invoice amount must be greater than zero and no more than 1,000,000,000 VKT.");}catch(err){$("formError").textContent=err.message||"Invalid VKT amount.";return;}showInvoice({merchant:ethers.getAddress(merchant),token:ethers.getAddress(token),amount,reference:$("reference").value.trim()});});
 $("connectBtn").addEventListener("click",async()=>{try{await connect();}catch(err){$("walletState").textContent=err.message;}});
 $("clearHistory").addEventListener("click",()=>{localStorage.removeItem("vkt-invoices");history();});
 $("verifyBtn").addEventListener("click",verifyTransaction);
-const p=new URLSearchParams(location.search);if(p.has("to")&&p.has("token")&&p.has("amount")){const d={merchant:p.get("to"),token:p.get("token"),amount:p.get("amount"),reference:p.get("ref")||"",invoiceId:p.get("id")||undefined};if(validAddress(d.merchant)&&validAddress(d.token)&&/^(?:0|[1-9]\d*)(?:\.\d{1,18})?$/.test(d.amount)&&Number(d.amount)>0){$("merchantWallet").value=d.merchant;$("tokenAddress").value=d.token;$("amount").value=d.amount;$("reference").value=d.reference;showInvoice(d,false);}else setStatus("This invoice link contains invalid details.",true);}
+const p=new URLSearchParams(location.search);if(p.has("to")&&p.has("token")&&p.has("amount")){const d={merchant:p.get("to"),token:p.get("token"),amount:p.get("amount"),reference:p.get("ref")||"",invoiceId:p.get("id")||undefined};if(validAddress(d.merchant)&&validAddress(d.token)&&/^(?:0|[1-9]\d*)(?:\.\d{1,18})?$/.test(d.amount)&&Number(d.amount)>0){$("merchantWallet").value=d.merchant;$("tokenAddress").value=d.token;$("amount").value=d.amount;$("reference").value=d.reference;showInvoice(d,false);refreshInvoiceStatus();}else setStatus("This invoice link contains invalid details.",true);}
 history();if(window.ethereum){window.ethereum.on?.("accountsChanged",()=>{signer=null;provider=null;$("walletState").textContent="Wallet account changed — reconnect to continue.";});window.ethereum.on?.("chainChanged",()=>{signer=null;provider=null;$("walletState").textContent="Network changed — reconnect and confirm BNB Testnet.";setStatus("Wallet network changed. Reconnect before making a payment.",true);});}
 })();
