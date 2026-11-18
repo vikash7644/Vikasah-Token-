@@ -1,6 +1,7 @@
 import {
   BNB_TESTNET_CHAIN_ID,
   assertSameBlock,
+  snapshotToCsv,
   buildSnapshot,
   formatUnits,
   parseDecimals,
@@ -103,6 +104,17 @@ $("export").addEventListener("click", () => {
   const link = document.createElement("a");
   link.href = url;
   link.download = "vkt-treasury-snapshot-" + latestSnapshot.blockNumber + ".json";
+  link.click();
+  URL.revokeObjectURL(url);
+});
+
+$("export-csv").addEventListener("click", () => {
+  if (!latestSnapshot) return;
+  const blob = new Blob([snapshotToCsv(latestSnapshot)], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "vkt-treasury-snapshot-" + latestSnapshot.blockNumber + ".csv";
   link.click();
   URL.revokeObjectURL(url);
 });
