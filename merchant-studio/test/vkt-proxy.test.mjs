@@ -38,6 +38,20 @@ test("proxy refuses insecure upstream URLs and weak API keys", () => {
   }), /at least 32 bytes/);
 });
 
+test("public checkout configuration is proxied without exposing credentials", async () => {
+  let captured;
+  const routes = harness(async (url, options) => {
+    captured = { url: String(url), options };
+    return { status: 200, json: async () => ({ chainId: 97, tokenAddress: "0x0000000000000000000000000000000000000001", merchantAddress: "0x0000000000000000000000000000000000000002" }) };
+  });
+  const res = responseRecorder();
+  await routes.get("GET /api/vkt/config")({}, res);
+  assert.equal(res.statusCode, 200);
+  assert.equal(captured.url, "https://payments.example/v1/config");
+  assert.equal(captured.options.headers.authorization, undefined);
+  assert.equal(JSON.stringify(res.payload).includes(apiKey), false);
+});
+
 test("invoice creation validates fields before forwarding", async () => {
   let calls = 0;
   const routes = harness(async () => { calls += 1; return { status: 201, json: async () => ({ status: "pending" }) }; });
