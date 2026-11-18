@@ -35,6 +35,10 @@ Set these in the hosting provider's encrypted environment-variable settings, nev
 
 Never put `MERCHANT_API_KEY`, wallet private keys, or seed phrases in the static portal, frontend environment variables, GitHub commits, or browser storage. The API does not need a customer's private key.
 
+## Browser origin policy
+
+- `CORS_ALLOWED_ORIGINS`: comma-separated exact HTTPS origins for the merchant frontend (for example `https://merchant.example`); HTTP is accepted only for localhost development. Do not use `*` or include URL paths. Keep this list limited to domains you control.
+
 ## Safe rollout sequence
 
 1. Finish API tests and review the exact commit that will be deployed.
