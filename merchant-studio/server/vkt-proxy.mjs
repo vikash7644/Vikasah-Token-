@@ -1,8 +1,6 @@
-import { getAddress, isAddress, parseUnits } from "ethers";
-
 const invoicePattern = /^[a-zA-Z0-9_-]{1,80}$/;
 const transactionPattern = /^0x[a-fA-F0-9]{64}$/;
-const amountPattern = /^(?:0|[1-9]\\d*)(?:\\.\\d{1,18})?$/;
+const amountPattern = /^(?:0|[1-9]\d*)(?:\.\d{1,18})?$/;
 
 function normalizeApiUrl(value) {
   let url;
@@ -11,7 +9,7 @@ function normalizeApiUrl(value) {
   if ((url.protocol !== "https:" && !localHttp) || url.username || url.password || url.search || url.hash) {
     throw new Error("VKT_API_BASE_URL must be HTTPS (HTTP only on localhost) and contain no credentials, query or fragment.");
   }
-  return url.toString().replace(/\\/$/, "");
+  return url.toString().replace(/\/$/, "");
 }
 
 export function mountVktMerchantProxy(app, {
@@ -28,10 +26,7 @@ export function mountVktMerchantProxy(app, {
   async function upstream(path, options = {}) {
     const response = await fetchImpl(new URL(path, baseUrl), {
       ...options,
-      headers: {
-        accept: "application/json",
-        ...(options.headers || {})
-      },
+      headers: { accept: "application/json", ...(options.headers || {}) },
       signal: AbortSignal.timeout(10_000)
     });
     const payload = await response.json().catch(() => ({}));
@@ -42,17 +37,20 @@ export function mountVktMerchantProxy(app, {
     const { invoiceId, amount, payerAddress } = req.body || {};
     if (typeof invoiceId !== "string" || !invoicePattern.test(invoiceId) ||
         typeof amount !== "string" || !amountPattern.test(amount) ||
-        !isAddress(payerAddress) || getAddress(payerAddress) === "0x0000000000000000000000000000000000000000") {
+        typeof payerAddress !== "string" || !/^0x[a-fA-F0-9]{40}$/.test(payerAddress) ||
+        /^0x0{40}$/i.test(payerAddress)) {
       return res.status(400).json({ error: "A valid invoiceId, positive decimal amount and non-zero payerAddress are required." });
     }
     try {
-      if (parseUnits(amount, 18) <= 0n || parseUnits(amount, 18) > parseUnits("1000000000", 18)) {
+      const [whole, fraction = ""] = amount.split(".");
+      const amountWei = BigInt(whole) * 10n ** 18n + BigInt((fraction + "0".repeat(18)).slice(0, 18));
+      if (amountWei <= 0n || amountWei > 1_000_000_000n * 10n ** 18n) {
         return res.status(400).json({ error: "Invoice amount must be greater than zero and no more than 1,000,000,000 VKT." });
       }
       const result = await upstream("/v1/invoices", {
         method: "POST",
-        headers: { "content-type": "application/json", authorization: `Bearer ${merchantApiKey}` },
-        body: JSON.stringify({ invoiceId, amount, payerAddress: getAddress(payerAddress) })
+        headers: { "content-type": "application/json", authorization: "Bearer " + merchantApiKey },
+        body: JSON.stringify({ invoiceId, amount, payerAddress })
       });
       return res.status(result.status).json(result.payload);
     } catch {
@@ -65,8 +63,8 @@ export function mountVktMerchantProxy(app, {
       return res.status(400).json({ error: "A valid invoiceId is required." });
     }
     try {
-      const result = await upstream(`/v1/invoices/${encodeURIComponent(req.params.invoiceId)}`, {
-        headers: { authorization: `Bearer ${merchantApiKey}` }
+      const result = await upstream("/v1/invoices/" + encodeURIComponent(req.params.invoiceId), {
+        headers: { authorization: "Bearer " + merchantApiKey }
       });
       return res.status(result.status).json(result.payload);
     } catch {
