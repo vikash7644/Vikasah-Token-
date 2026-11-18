@@ -1,9 +1,7 @@
 (() => {
-const $=id=>document.getElementById(id), CHAIN_ID="0x61", MIN_CONFIRMATIONS=3, MAX_INVOICE_VKT=1_000_000_000n;
+const $=id=>document.getElementById(id), CHAIN_ID="0x61", MAX_INVOICE_VKT=1_000_000_000n;
 const CHAIN_PARAMS={chainId:CHAIN_ID,chainName:"BNB Smart Chain Testnet",nativeCurrency:{name:"tBNB",symbol:"tBNB",decimals:18},rpcUrls:["https://bsc-testnet-dataseed.bnbchain.org"],blockExplorerUrls:["https://testnet.bscscan.com/"]};
 const ABI=["function transfer(address to,uint256 value) returns (bool)","event Transfer(address indexed from,address indexed to,uint256 value)"];
-const TRANSFER_IFACE=new ethers.Interface(ABI);
-const PUBLIC_RPC="https://bsc-testnet-dataseed.bnbchain.org";
 let invoice=null,provider=null,signer=null;
 const fmtAddress=v=>v?v.slice(0,6)+"…"+v.slice(-4):"";
 const validAddress=v=>window.ethers&&ethers.isAddress(v);
@@ -15,7 +13,7 @@ function showInvoice(data,save=true){
  const shareUrl=new URL(location.href);shareUrl.search=new URLSearchParams({to:data.merchant,token:data.token,amount:data.amount,ref:data.reference||"",id:invoice.invoiceId}).toString();
  new QRCode($("qrcode"),{text:shareUrl.toString(),width:160,height:160,correctLevel:QRCode.CorrectLevel.M});
  $("copyLink").onclick=async()=>{try{await navigator.clipboard.writeText(shareUrl.toString());setStatus("Invoice link copied.");}catch{setStatus("Copy is unavailable here. Share the page URL manually.",true);}};
- if(save){const items=JSON.parse(localStorage.getItem("vkt-invoices")||"[]");items.unshift({...data,created:new Date().toLocaleString()});localStorage.setItem("vkt-invoices",JSON.stringify(items.slice(0,20)));history();}
+ if(save){const items=JSON.parse(localStorage.getItem("vkt-invoices")||"[]");items.unshift({...invoice,created:new Date().toLocaleString()});localStorage.setItem("vkt-invoices",JSON.stringify(items.slice(0,20)));history();}
  $("payBtn").disabled=false;$("payBtn").textContent="Pay with wallet";$("payBtn").onclick=payInvoice;setStatus("Request ready. QR contains invoice details only; it does not prove payment.");
 }
 async function connect(){if(!window.ethereum)throw Error("No browser wallet found. Open this page in a wallet-enabled browser.");if(!window.ethers)throw Error("Wallet library is loading. Try again.");provider=new ethers.BrowserProvider(window.ethereum);await provider.send("eth_requestAccounts",[]);signer=await provider.getSigner();const address=await signer.getAddress();$("walletState").className="wallet-state connected";$("walletState").innerHTML='<span class="wallet-dot"></span><span>'+escapeHtml(fmtAddress(address))+'</span>';$("connectBtn").textContent=fmtAddress(address);return address;}
@@ -58,7 +56,7 @@ async function payInvoice(){
    if(createResponse.status===409){
     const existingResponse=await fetch("/api/vkt/invoices/"+encodeURIComponent(invoice.invoiceId));
     const existing=await existingResponse.json().catch(()=>({}));
-    if(!existingResponse.ok||existing.payerAddress?.toLowerCase()!==payerAddress.toLowerCase()||existing.amount!==invoice.amount||existing.status!=="pending"){
+    if(!existingResponse.ok||existing.payerAddress?.toLowerCase()!==payerAddress.toLowerCase()||ethers.parseUnits(existing.amount,18)!==ethers.parseUnits(invoice.amount,18)||existing.status!=="pending"){
      throw Error("This invoice ID is already registered with different details or has already been paid. Create a new invoice.");
     }
    }else throw Error(created.error||"Could not register invoice with the merchant verifier.");
