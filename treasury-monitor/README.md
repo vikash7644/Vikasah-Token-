@@ -41,3 +41,20 @@ npm run test:treasury
 ```
 
 These tests cover HTTPS and address validation, distinct allocation wallets, BNB Testnet chain ID configuration, decimal parsing, exact integer formatting, and supply/balance sanity checks. They do not require a deployed VKT contract or live RPC access.
+## Related VKT payment tools
+
+The monitor is intentionally read-only and is not the payment verifier. The related components are maintained as separate draft pull requests:
+
+- [VKT Merchant Studio — invoice and QR checkout (PR #1)](https://github.com/vikash7644/Vikasah-Token-/pull/1) creates invoices and lets a customer approve a VKT transfer in their own wallet.
+- [VKT Developer Portal, Checkout SDK and Payment Verifier API (PR #3)](https://github.com/vikash7644/Vikasah-Token-/pull/3) verifies transaction receipts and persists invoice settlement status. Merchant Studio's server proxy is configured to call this API; it keeps the merchant API key server-side.
+- This Treasury Monitor (PR #4) independently reads token supply and the two allocation-wallet balances at one pinned block. It cannot create invoices, verify merchant orders, or move funds.
+
+### Safe integration order
+
+1. Review the token deployment configuration and independently verify all three wallet roles before any deployment transaction. No VKT contract address is currently published by these draft PRs.
+2. Deploy and verify the testnet token only after explicit wallet-owner approval; record the verified contract address and allocation receivers.
+3. Configure the Payment Verifier API with that exact chain ID, token address, merchant recipient, RPC endpoint and durable database. Keep its API key private.
+4. Configure Merchant Studio's server proxy with the verifier's HTTPS base URL and the matching private API key. Confirm its public chain/token/merchant configuration matches the invoice before any wallet transfer.
+5. Open this monitor separately with the verified token and allocation receiver addresses. Compare its on-chain balances with the deployment record; do not treat its 30% / 70% design labels as proof of wallet ownership.
+
+All three pull requests are independent, open drafts. Their CI checks do not mean the services are deployed or that a live testnet payment has been completed. Do not use real funds or expose API keys in browser code.
