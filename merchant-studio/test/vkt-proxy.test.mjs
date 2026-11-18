@@ -1,0 +1,112 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { mountVktMerchantProxy } from "../server/vkt-proxy.mjs";
+
+const apiKey = "test-only-merchant-key-with-more-than-32-bytes";
+const payerAddress = "0x0000000000000000000000000000000000000003";
+function harness(fetchImpl = async () => ({ status: 200, json: async () => ({ ok: true }) })) {
+  const routes = new Map();
+  const app = {
+    post(path, handler) { routes.set("POST " + path, handler); },
+    get(path, handler) { routes.set("GET " + path, handler); }
+  };
+  mountVktMerchantProxy(app, {
+    apiBaseUrl: "https://payments.example/",
+    merchantApiKey: apiKey,
+    fetchImpl
+  });
+  return routes;
+}
+function responseRecorder() {
+  return {
+    statusCode: 200,
+    payload: null,
+    status(code) { this.statusCode = code; return this; },
+    json(payload) { this.payload = payload; return this; }
+  };
+}
+
+test("proxy refuses insecure upstream URLs and weak API keys", () => {
+  const app = { post() {}, get() {} };
+  assert.throws(() => mountVktMerchantProxy(app, {
+    apiBaseUrl: "http://payments.example",
+    merchantApiKey: apiKey
+  }), /HTTPS/);
+  assert.throws(() => mountVktMerchantProxy(app, {
+    apiBaseUrl: "https://payments.example",
+    merchantApiKey: "short"
+  }), /at least 32 bytes/);
+});
+
+test("invoice creation validates fields before forwarding", async () => {
+  let calls = 0;
+  const routes = harness(async () => { calls += 1; return { status: 201, json: async () => ({ status: "pending" }) }; });
+  const handler = routes.get("POST /api/vkt/invoices");
+  for (const body of [
+    { invoiceId: "../bad", amount: "1", payerAddress },
+    { invoiceId: "zero", amount: "0", payerAddress },
+    { invoiceId: "float", amount: "1e3", payerAddress },
+    { invoiceId: "zero-payer", amount: "1", payerAddress: "0x0000000000000000000000000000000000000000" },
+    { invoiceId: "over-cap", amount: "1000000000.000000000000000001", payerAddress }
+  ]) {
+    const res = responseRecorder();
+    await handler({ body }, res);
+    assert.equal(res.statusCode, 400);
+  }
+  assert.equal(calls, 0);
+});
+
+test("invoice creation forwards the merchant key only from server-side proxy", async () => {
+  let captured;
+  const routes = harness(async (url, options) => {
+    captured = { url: String(url), options };
+    return { status: 201, json: async () => ({ invoiceId: "order-1", status: "pending" }) };
+  });
+  const res = responseRecorder();
+  await routes.get("POST /api/vkt/invoices")({
+    body: { invoiceId: "order-1", amount: "1.25", payerAddress }
+  }, res);
+  assert.equal(res.statusCode, 201);
+  assert.equal(captured.url, "https://payments.example/v1/invoices");
+  assert.equal(captured.options.headers.authorization, "Bearer " + apiKey);
+  assert.equal(JSON.parse(captured.options.body).payerAddress, payerAddress);
+  assert.equal(JSON.stringify(res.payload).includes(apiKey), false);
+});
+
+test("invoice status lookup forwards bearer auth and encodes the invoice id", async () => {
+  let captured;
+  const routes = harness(async (url, options) => {
+    captured = { url: String(url), options };
+    return { status: 200, json: async () => ({ status: "paid" }) };
+  });
+  const res = responseRecorder();
+  await routes.get("GET /api/vkt/invoices/:invoiceId")({ params: { invoiceId: "order-1" } }, res);
+  assert.equal(res.statusCode, 200);
+  assert.equal(captured.url, "https://payments.example/v1/invoices/order-1");
+  assert.equal(captured.options.headers.authorization, "Bearer " + apiKey);
+  assert.deepEqual(res.payload, { status: "paid" });
+});
+
+test("payment verification forwards no merchant secret", async () => {
+  let captured;
+  const routes = harness(async (url, options) => {
+    captured = { url: String(url), options };
+    return { status: 202, json: async () => ({ status: "confirming" }) };
+  });
+  const res = responseRecorder();
+  const transactionHash = "0x" + "a".repeat(64);
+  await routes.get("POST /api/vkt/payments/verify")({
+    body: { invoiceId: "order-1", transactionHash }
+  }, res);
+  assert.equal(res.statusCode, 202);
+  assert.equal(captured.options.headers.authorization, undefined);
+  assert.deepEqual(JSON.parse(captured.options.body), { invoiceId: "order-1", transactionHash });
+});
+
+test("upstream network errors return a stable 502 response", async () => {
+  const routes = harness(async () => { throw new Error("sensitive internal failure"); });
+  const res = responseRecorder();
+  await routes.get("GET /api/vkt/invoices/:invoiceId")({ params: { invoiceId: "order-1" } }, res);
+  assert.equal(res.statusCode, 502);
+  assert.deepEqual(res.payload, { error: "VKT invoice service is unavailable. Retry later." });
+});
