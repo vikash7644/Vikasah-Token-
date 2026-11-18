@@ -15,7 +15,7 @@ This document describes a low-maintenance cloud deployment path. It does not dep
 - Runtime: Node.js 20
 - Build command: `npm install`
 - Start command: `npm start`
-- Health-check path: `/health`
+- Liveness path: `/health`\n- Readiness path: `/ready` (checks database, testnet RPC chain ID, and deployed token bytecode)
 - Persistent disk mount path: `/var/data`
 - Environment variable: `DATABASE_PATH=/var/data/vkt-payments.sqlite`
 
@@ -45,16 +45,16 @@ Never put `MERCHANT_API_KEY`, wallet private keys, or seed phrases in the static
 2. Deploy the VKT contract to BNB Smart Chain Testnet using a separate, funded test wallet only after explicit approval.
 3. Verify the contract address and ownership/allocation on-chain.
 4. Create the cloud API service and persistent disk; configure the environment variables above.
-5. Confirm `/health` reports chain ID 97 and the service stays healthy after a restart.
+5. Confirm `/health` is live and `/ready` returns ready only when SQLite, chain ID 97 RPC, and deployed token bytecode are available; repeat after a service restart.
 6. Run `npm run backup` with the source and destination on the persistent disk, then copy the backup to separate storage and perform a restore drill.
 7. Create a small test invoice and verify a real wallet-signed testnet transfer end-to-end.
-8. Test duplicate submissions, wrong payer, wrong amount, insufficient confirmations, service restart, backup restore, rate limiting, and reorg reconciliation.
+8. Schedule `npm run reconcile` (single instance only) against the same persistent database, for example every 5 minutes; monitor failures and reset counts. Test duplicate submissions, wrong payer, wrong amount, insufficient confirmations, service restart, backup restore, rate limiting, and reorg reconciliation.
 9. Only after independent security review should production hosting or mainnet be considered.
 
 ## Current blockers
 
 - The VKT token contract has not been deployed, so there is no verified contract address to configure.
 - The API is a single-merchant testnet starter, not a production payment processor.
-- Periodic reconciliation, stronger finality handling, monitoring/alerts, off-disk scheduled backups and restore drills, webhook delivery, merchant authentication lifecycle, and independent security review remain required. The current verification rate limit is service-wide and SQLite-backed for this single-instance starter; it is not a distributed multi-instance limiter.
-- The backup command creates a consistent SQLite snapshot, but scheduling, off-disk retention, encryption, and restore verification must be configured operationally.
+- The reconciliation command is implemented but must still be scheduled and monitored by the host. Stronger finality handling, monitoring/alerts, off-disk scheduled backups and restore drills, webhook delivery, merchant authentication lifecycle, and independent security review remain required. The current verification rate limit is service-wide and SQLite-backed for this single-instance starter; it is not a distributed multi-instance limiter.
+- The backup command creates a consistent SQLite snapshot; the restore command validates a backup into a new destination without overwriting an existing database. Scheduling, off-disk retention, encryption, and recurring restore drills must be configured operationally.
 - No cloud service, persistent disk, domain, or paid plan has been created by this repository change.
