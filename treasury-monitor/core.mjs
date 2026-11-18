@@ -74,3 +74,11 @@ export function buildSnapshot({ token, owner, reserve, blockNumber, blockHash, d
     note: "Read-only RPC snapshot. Wallet labels are user-supplied and must be verified against deployment records. Not an audited financial statement."
   };
 }
+
+export function assertSameBlock(expectedHash, observedHash) {
+  if (typeof expectedHash !== "string" || typeof observedHash !== "string" ||
+      expectedHash.toLowerCase() !== observedHash.toLowerCase()) {
+    throw new Error("The snapshot block changed during the read (possible chain reorganization). Please retry.");
+  }
+  return true;
+}
