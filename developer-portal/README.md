@@ -6,9 +6,10 @@ A static, mobile-friendly developer documentation site for Vikasah Token.
 - `index.html`, `styles.css`, `app.js`: documentation portal frontend.
 - `sdk/`: non-custodial browser checkout helper for injected wallets, restricted to BNB Smart Chain Testnet (chain ID 97).
 - `api/`: single-merchant Node.js + SQLite invoice and receipt verifier starter. It checks the configured token contract, chain, successful receipt, exact merchant recipient and amount, confirmation depth and transaction-hash reuse.
+- Utility Passport SDK helpers: read a wallet's position, request an exact allowance, lock VKT for the fixed 180-day period and request withdrawal after expiry. The contract enforces the lock; every write requires a separate wallet confirmation.
 
 ## Current status
-These are source-code starters in a review branch, not a hosted service. The VKT contract has not yet been deployed to BNB Smart Chain Testnet, so no real contract address is published. The SDK is not published to npm, and the API is not deployed. Do not use placeholder addresses or real funds.
+These are source-code starters in a review branch, not a hosted service. The VKT contract has not yet been deployed to BNB Smart Chain Testnet, so no real contract address is published. The SDK is not published to npm, the Utility Passport is not deployed, and the API is not deployed. Do not use placeholder addresses or real funds.
 
 ## Local development
 - SDK: install `ethers` in the consuming test application and import `sdk/src/index.js`.
