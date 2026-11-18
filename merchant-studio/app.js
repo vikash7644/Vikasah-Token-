@@ -49,6 +49,14 @@ async function payInvoice(){
  try{
   $("payBtn").disabled=true;setStatus("Connecting wallet…");
   if(!signer)await connect();await ensureTestnet();
+  const configResponse=await fetch("/api/vkt/config");
+  const config=await configResponse.json().catch(()=>({}));
+  if(!configResponse.ok||config.chainId!==97||typeof config.tokenAddress!=="string"||typeof config.merchantAddress!=="string"){
+   throw Error(config.error||"The merchant backend has no verified BNB testnet checkout configuration.");
+  }
+  if(config.tokenAddress.toLowerCase()!==invoice.token.toLowerCase()||config.merchantAddress.toLowerCase()!==invoice.merchant.toLowerCase()){
+   throw Error("Invoice token or merchant address does not match the server's configured VKT checkout. No transfer was sent.");
+  }
   const payerAddress=await signer.getAddress();
   const createResponse=await fetch("/api/vkt/invoices",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({invoiceId:invoice.invoiceId,amount:invoice.amount,payerAddress})});
   const created=await createResponse.json().catch(()=>({}));
