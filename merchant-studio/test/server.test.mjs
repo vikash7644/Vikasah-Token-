@@ -105,6 +105,8 @@ test("static checkout is served but server source files are not public", async (
 
   const source = await fetch(baseUrl + "/server/vkt-proxy.mjs");
   assert.equal(source.status, 404);
+  const tests = await fetch(baseUrl + "/test/server.test.mjs");
+  assert.equal(tests.status, 404);
 });
 
 test("checkout API rejects malformed invoice requests before upstream forwarding", async () => {
