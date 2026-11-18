@@ -1,4 +1,4 @@
-import { BrowserProvider, Contract, parseUnits } from "ethers";
+import { BrowserProvider, Contract, getAddress, parseUnits } from "ethers";
 
 export const BSC_TESTNET_CHAIN_ID = 97;
 export const VKT_DECIMALS = 18;
@@ -23,12 +23,9 @@ export async function connectVktWallet() {
 /** Sends an exact VKT transfer on BNB Smart Chain Testnet. */
 export async function payVkt({ signer, tokenAddress, merchantAddress, amount }) {
   if (!signer) throw new Error("Connect a wallet first.");
-  if (!/^0x[a-fA-F0-9]{40}$/.test(tokenAddress) || !/^0x[a-fA-F0-9]{40}$/.test(merchantAddress)) {
-    throw new Error("A valid deployed token and merchant address are required.");
-  }
-  if (!/^(?:0|[1-9]\d*)(?:\.\d{1,18})?$/.test(String(amount)) || Number(amount) <= 0) {
-    throw new Error("Amount must be a positive decimal with at most 18 places.");
-  }
+  tokenAddress = requireContractAddress("VKT token address", tokenAddress);
+  merchantAddress = requireContractAddress("Merchant address", merchantAddress);
+  const amountText = requirePositiveTokenAmount(amount);
   const network = await signer.provider.getNetwork();
   if (Number(network.chainId) !== BSC_TESTNET_CHAIN_ID) throw new Error("Wrong network: BNB Smart Chain Testnet is required.");
   const token = new Contract(tokenAddress, ERC20_ABI, signer);
@@ -62,9 +59,8 @@ const PASSPORT_ABI = [
 /** Reads a wallet's 180-day VKT Utility Passport status; does not move tokens. */
 export async function readVktUtilityPassport({ provider, passportAddress, account }) {
   if (!provider) throw new Error("A connected wallet provider is required.");
-  if (!/^0x[a-fA-F0-9]{40}$/.test(passportAddress) || !/^0x[a-fA-F0-9]{40}$/.test(account)) {
-    throw new Error("A valid deployed passport address and wallet address are required.");
-  }
+  passportAddress = requireContractAddress("Passport address", passportAddress);
+  account = requireContractAddress("Wallet address", account);
   const network = await provider.getNetwork();
   if (Number(network.chainId) !== BSC_TESTNET_CHAIN_ID) {
     throw new Error("Switch to BNB Smart Chain Testnet (chain ID 97).");
@@ -95,7 +91,11 @@ function requireContractAddress(label, value) {
   if (typeof value !== "string" || !/^0x[a-fA-F0-9]{40}$/.test(value)) {
     throw new Error(`${label} must be a valid EVM address.`);
   }
-  return value;
+  try {
+    return getAddress(value);
+  } catch {
+    throw new Error(`${label} must be a valid checksummed EVM address.`);
+  }
 }
 
 function requirePositiveTokenAmount(value) {
