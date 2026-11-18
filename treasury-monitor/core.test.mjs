@@ -7,6 +7,7 @@ import {
   buildSnapshot,
   formatUnits,
   isValidAddress,
+  parseBlockTimestamp,
   parseDecimals,
   validateConfig,
   validateSupply
@@ -83,4 +84,10 @@ test("exports a quoted CSV with raw integer amounts", () => {
   assert.match(csv, /"ownerBalanceRaw","300"/);
   assert.match(csv, /"reserveBalanceRaw","700"/);
   assert.ok(csv.endsWith("\r\n"));
+});
+
+test("parses valid chain timestamps and rejects malformed RPC values", () => {
+  assert.equal(parseBlockTimestamp("0x673c2b40"), new Date(Number(0x673c2b40) * 1000).toISOString());
+  assert.throws(() => parseBlockTimestamp("latest"), /invalid block timestamp/);
+  assert.throws(() => parseBlockTimestamp("0x0"), /outside the supported date range/);
 });
