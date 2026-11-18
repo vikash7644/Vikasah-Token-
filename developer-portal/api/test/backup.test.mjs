@@ -32,7 +32,7 @@ test("online backup command creates a consistent standalone SQLite copy", async 
       child.once("close", resolve);
     });
     assert.equal(exitCode, 0, stderr);
-    assert.match(stdout, /SQLite backup completed/);
+    assert.match(stdout, /SQLite backup completed and integrity-checked/);
 
     const copy = new Database(destination, { readonly: true, fileMustExist: true });
     assert.equal(copy.prepare("SELECT value FROM sample WHERE id = 1").get().value, "backup-ok");
