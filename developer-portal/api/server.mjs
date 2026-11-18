@@ -73,7 +73,7 @@ app.get("/health", (_req, res) => res.json({ ok: true, network: "bsc-testnet", c
 
 app.post("/v1/invoices", (req, res) => {
   const authorization = req.get("authorization");
-  const bearerMatch = typeof authorization === "string" ? authorization.match(/^Bearer (\\S+)$/i) : null;
+  const bearerMatch = typeof authorization === "string" ? authorization.match(/^Bearer (\S+)$/i) : null;
   const suppliedKey = bearerMatch?.[1];
   if (!hasValidMerchantApiKey(suppliedKey)) {
     return res.status(401).json({ error: "Unauthorized" });
