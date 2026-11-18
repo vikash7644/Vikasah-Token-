@@ -20,12 +20,14 @@ subtask(TASK_COMPILE_SOLIDITY_GET_SOLC_BUILD).setAction(async ({ solcVersion }, 
 });
 
 const networks = {};
-if (process.env.BSC_TESTNET_RPC_URL && process.env.DEPLOYER_PRIVATE_KEY) {
+if (process.env.BSC_TESTNET_RPC_URL) {
   networks.bscTestnet = {
     url: process.env.BSC_TESTNET_RPC_URL,
-    chainId: 97,
-    accounts: [process.env.DEPLOYER_PRIVATE_KEY]
+    chainId: 97
   };
+  if (process.env.DEPLOYER_PRIVATE_KEY) {
+    networks.bscTestnet.accounts = [process.env.DEPLOYER_PRIVATE_KEY];
+  }
 }
 
 module.exports = {
