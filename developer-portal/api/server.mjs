@@ -83,7 +83,8 @@ app.post("/v1/invoices", (req, res) => {
 
 app.post("/v1/payments/verify", async (req, res) => {
   const { invoiceId, transactionHash } = req.body || {};
-  if (typeof invoiceId !== "string" || typeof transactionHash !== "string" || !/^0x[a-fA-F0-9]{64}$/.test(transactionHash)) {
+  if (typeof invoiceId !== "string" || !/^[a-zA-Z0-9_-]{1,80}$/.test(invoiceId) ||
+      typeof transactionHash !== "string" || !/^0x[a-fA-F0-9]{64}$/.test(transactionHash)) {
     return res.status(400).json({ error: "A valid invoiceId and transactionHash are required." });
   }
   let invoice = getInvoice.get(invoiceId);
