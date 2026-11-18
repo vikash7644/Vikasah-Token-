@@ -89,7 +89,37 @@ const consumeVerifyRateLimit = db.prepare(`
   RETURNING request_count, window_started_at
 `);
 const iface = new Interface(["event Transfer(address indexed from, address indexed to, uint256 value)"]);
+const corsAllowedOrigins = new Set(
+  (process.env.CORS_ALLOWED_ORIGINS || "")
+    .split(",")
+    .map(origin => origin.trim())
+    .filter(Boolean)
+);
+for (const origin of corsAllowedOrigins) {
+  let parsed;
+  try { parsed = new URL(origin); } catch {
+    throw new Error("CORS_ALLOWED_ORIGINS must contain valid origins.");
+  }
+  const localHttp = parsed.protocol === "http:" &&
+    ["localhost", "127.0.0.1", "[::1]"].includes(parsed.hostname);
+  if ((!localHttp && parsed.protocol !== "https:") || parsed.origin !== origin) {
+    throw new Error("CORS origins must be HTTPS origins (HTTP is allowed only for localhost).");
+  }
+}
 const app = express();
+app.use((req, res, next) => {
+  const origin = req.get("origin");
+  if (!origin) return next();
+  if (!corsAllowedOrigins.has(origin)) {
+    return res.status(403).json({ error: "Origin is not allowed." });
+  }
+  res.set("Access-Control-Allow-Origin", origin);
+  res.set("Vary", "Origin");
+  res.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  if (req.method === "OPTIONS") return res.status(204).end();
+  return next();
+});
 app.use(express.json({ limit: "16kb" }));
 
 app.get("/health", (_req, res) => res.json({ ok: true, network: "bsc-testnet", chainId: 97 }));
