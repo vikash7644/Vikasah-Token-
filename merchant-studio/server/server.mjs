@@ -23,6 +23,20 @@ app.use("/api/vkt", rateLimit({
 }));
 mountVktMerchantProxy(app, { apiBaseUrl, merchantApiKey });
 
+app.get("/health", (_req, res) => res.json({ ok: true, service: "vkt-merchant-studio" }));
+app.get("/ready", async (_req, res) => {
+  try {
+    const response = await fetch(new URL("/v1/config", apiBaseUrl), { signal: AbortSignal.timeout(5_000) });
+    const config = await response.json().catch(() => ({}));
+    if (!response.ok || config.chainId !== 97 || !config.tokenAddress || !config.merchantAddress) {
+      return res.status(503).json({ ok: false, ready: false, reason: "VKT testnet verifier configuration is unavailable." });
+    }
+    return res.json({ ok: true, ready: true, chainId: 97, network: "bsc-testnet" });
+  } catch {
+    return res.status(503).json({ ok: false, ready: false, reason: "VKT testnet verifier is unreachable." });
+  }
+});
+
 const here = dirname(fileURLToPath(import.meta.url));
 const staticRoot = resolve(here, "..");
 app.use("/server", (_req, res) => res.sendStatus(404));
