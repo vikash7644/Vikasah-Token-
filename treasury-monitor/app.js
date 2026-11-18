@@ -4,6 +4,7 @@ import {
   snapshotToCsv,
   buildSnapshot,
   formatUnits,
+  parseBlockTimestamp,
   parseDecimals,
   validateConfig,
   validateSupply
@@ -49,7 +50,7 @@ async function load() {
       throw new Error("Wrong network. Expected BNB Smart Chain Testnet (chain ID 97).");
     }
     const block = await rpc(rpcUrl, "eth_getBlockByNumber", ["latest", false]);
-    if (!block || !block.number || !block.hash) throw new Error("RPC did not return a complete block reference.");
+    if (!block || !block.number || !block.hash || !block.timestamp) throw new Error("RPC did not return a complete block reference.");
     const blockTag = block.number;
     const blockNumberBig = BigInt(blockTag);
     if (blockNumberBig > BigInt(Number.MAX_SAFE_INTEGER)) throw new Error("Block number exceeds the safe display range.");
@@ -74,7 +75,7 @@ async function load() {
 
     latestSnapshot = buildSnapshot({
       token, owner, reserve, blockNumber, blockHash: block.hash,
-      blockTimestamp: new Date(Number(BigInt(block.timestamp)) * 1000).toISOString(),
+      blockTimestamp: parseBlockTimestamp(block.timestamp),
       decimals, supply, ownerBalance, reserveBalance, timestamp: new Date().toISOString()
     });
     $("total").textContent = formatUnits(supply, decimals) + " VKT";
