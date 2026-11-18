@@ -82,3 +82,30 @@ export function assertSameBlock(expectedHash, observedHash) {
   }
   return true;
 }
+
+export function snapshotToCsv(snapshot) {
+  const rows = [
+    ["field", "value"],
+    ["schema", snapshot.schema],
+    ["network", snapshot.network],
+    ["chainId", snapshot.chainId],
+    ["capturedAt", snapshot.capturedAt],
+    ["blockNumber", snapshot.blockNumber],
+    ["blockHash", snapshot.blockHash],
+    ["tokenContract", snapshot.tokenContract],
+    ["ownerAllocationWallet", snapshot.ownerAllocationWallet],
+    ["distributionReserveWallet", snapshot.distributionReserveWallet],
+    ["decimals", snapshot.decimals],
+    ["totalSupply", snapshot.totalSupply],
+    ["totalSupplyRaw", snapshot.totalSupplyRaw],
+    ["ownerBalance", snapshot.ownerBalance],
+    ["ownerBalanceRaw", snapshot.ownerBalanceRaw],
+    ["reserveBalance", snapshot.reserveBalance],
+    ["reserveBalanceRaw", snapshot.reserveBalanceRaw],
+    ["note", snapshot.note]
+  ];
+  return rows.map((row) => row.map((value) => {
+    const text = String(value ?? "");
+    return '"' + text.replace(/"/g, '""') + '"';
+  }).join(",")).join("\r\n") + "\r\n";
+}
