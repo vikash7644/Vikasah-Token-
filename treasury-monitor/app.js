@@ -45,26 +45,30 @@ async function load() {
     if (chain.toLowerCase() !== BNB_TESTNET_CHAIN_ID) {
       throw new Error("Wrong network. Expected BNB Smart Chain Testnet (chain ID 97).");
     }
-    const code = await rpc(rpcUrl, "eth_getCode", [token, "latest"]);
+    const block = await rpc(rpcUrl, "eth_getBlockByNumber", ["latest", false]);
+    if (!block || !block.number || !block.hash) throw new Error("RPC did not return a complete block reference.");
+    const blockTag = block.number;
+    const blockNumberBig = BigInt(blockTag);
+    if (blockNumberBig > BigInt(Number.MAX_SAFE_INTEGER)) throw new Error("Block number exceeds the safe display range.");
+    const blockNumber = Number(blockNumberBig);
+    const code = await rpc(rpcUrl, "eth_getCode", [token, blockTag]);
     if (code === "0x") throw new Error("No contract bytecode found at the token address.");
 
-    status.textContent = "Reading token supply, balances and block number…";
-    const [supplyHex, decimalsHex, ownerHex, reserveHex, blockHex] = await Promise.all([
-      rpc(rpcUrl, "eth_call", [{ to: token, data: "0x18160ddd" }, "latest"]),
-      rpc(rpcUrl, "eth_call", [{ to: token, data: "0x313ce567" }, "latest"]),
-      rpc(rpcUrl, "eth_call", [{ to: token, data: callData("0x70a08231", owner) }, "latest"]),
-      rpc(rpcUrl, "eth_call", [{ to: token, data: callData("0x70a08231", reserve) }, "latest"]),
-      rpc(rpcUrl, "eth_blockNumber", [])
+    status.textContent = "Reading token supply and wallet balances at block " + blockNumber + "…";
+    const [supplyHex, decimalsHex, ownerHex, reserveHex] = await Promise.all([
+      rpc(rpcUrl, "eth_call", [{ to: token, data: "0x18160ddd" }, blockTag]),
+      rpc(rpcUrl, "eth_call", [{ to: token, data: "0x313ce567" }, blockTag]),
+      rpc(rpcUrl, "eth_call", [{ to: token, data: callData("0x70a08231", owner) }, blockTag]),
+      rpc(rpcUrl, "eth_call", [{ to: token, data: callData("0x70a08231", reserve) }, blockTag])
     ]);
     const decimals = parseDecimals(decimalsHex);
     const supply = BigInt(supplyHex);
     const ownerBalance = BigInt(ownerHex);
     const reserveBalance = BigInt(reserveHex);
-    const blockNumber = Number(BigInt(blockHex));
     validateSupply({ supply, ownerBalance, reserveBalance, decimals });
 
     latestSnapshot = buildSnapshot({
-      token, owner, reserve, blockNumber, decimals, supply, ownerBalance, reserveBalance,
+      token, owner, reserve, blockNumber, blockHash: block.hash, decimals, supply, ownerBalance, reserveBalance,
       timestamp: new Date().toISOString()
     });
     $("total").textContent = formatUnits(supply, decimals) + " VKT";
