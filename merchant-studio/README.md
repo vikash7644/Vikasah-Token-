@@ -35,6 +35,7 @@ The status API key is deliberately kept on the server. Do not add `MERCHANT_API_
    ```
 
 5. Open the Merchant Studio server URL. The server serves this folder and exposes same-origin routes:
+   - `GET /api/vkt/config` — returns the API's public chain ID, token address and merchant address. The browser compares these with the invoice before sending any transfer.
    - `POST /api/vkt/invoices` — registers invoice ID, amount and connected payer.
    - `POST /api/vkt/payments/verify` — requests chain receipt verification.
    - `GET /api/vkt/invoices/:invoiceId` — returns persisted invoice status through the server-held API key.
