@@ -33,7 +33,7 @@ try {
   if (Number(network.chainId) !== 97) {
     throw new Error("RPC endpoint is not BNB Smart Chain Testnet (chain ID 97).");
   }
-  for (const invoice of paidInvoices.iterate()) {
+  // Materialize rows before updates; mutating through the same connection while a SELECT cursor is active is unsafe.\n  for (const invoice of paidInvoices.all()) {
     checked += 1;
     let canonicalBlock;
     try {
