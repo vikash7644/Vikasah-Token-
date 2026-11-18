@@ -20,6 +20,10 @@ if (!isAddress(process.env.VKT_TOKEN_ADDRESS) || !isAddress(process.env.VKT_MERC
 }
 const tokenAddress = getAddress(process.env.VKT_TOKEN_ADDRESS);
 const merchantAddress = getAddress(process.env.VKT_MERCHANT_ADDRESS);
+const zeroAddress = "0x0000000000000000000000000000000000000000";
+if (tokenAddress === zeroAddress || merchantAddress === zeroAddress || tokenAddress === merchantAddress) {
+  throw new Error("VKT token and merchant addresses must be non-zero and distinct.");
+}
 const maxSupplyWei = parseUnits("1000000000", 18);
 const minConfirmations = Number(process.env.MIN_CONFIRMATIONS || 3);
 if (!Number.isSafeInteger(minConfirmations) || minConfirmations < 1) throw new Error("MIN_CONFIRMATIONS must be a positive integer.");
@@ -69,7 +73,8 @@ app.get("/health", (_req, res) => res.json({ ok: true, network: "bsc-testnet", c
 
 app.post("/v1/invoices", (req, res) => {
   const authorization = req.get("authorization");
-  const suppliedKey = authorization?.startsWith("Bearer ") ? authorization.slice(7) : undefined;
+  const bearerMatch = typeof authorization === "string" ? authorization.match(/^Bearer ([^\\s]+)$/i) : null;
+  const suppliedKey = bearerMatch?.[1];
   if (!hasValidMerchantApiKey(suppliedKey)) {
     return res.status(401).json({ error: "Unauthorized" });
   }
@@ -77,7 +82,9 @@ app.post("/v1/invoices", (req, res) => {
   if (typeof invoiceId !== "string" || !/^[a-zA-Z0-9_-]{1,80}$/.test(invoiceId)) {
     return res.status(400).json({ error: "invoiceId must be 1-80 letters, numbers, _ or -." });
   }
-  if (!isAddress(payerAddress)) return res.status(400).json({ error: "A valid expected payerAddress is required." });
+  if (!isAddress(payerAddress) || getAddress(payerAddress) === zeroAddress) {
+    return res.status(400).json({ error: "A valid non-zero expected payerAddress is required." });
+  }
   if (typeof amount !== "string" || !/^(?:0|[1-9]\d*)(?:\.\d{1,18})?$/.test(amount)) {
     return res.status(400).json({ error: "amount must be a positive decimal with at most 18 places." });
   }
@@ -162,6 +169,16 @@ app.post("/v1/payments/verify", async (req, res) => {
     }
     return res.status(502).json({ error: "Could not verify the transaction. Retry later or contact the merchant." });
   }
+});
+
+app.use((error, _req, res, _next) => {
+  if (error?.type === "entity.too.large") {
+    return res.status(413).json({ error: "Request body is too large." });
+  }
+  if (error instanceof SyntaxError && error.status === 400 && "body" in error) {
+    return res.status(400).json({ error: "Request body must contain valid JSON." });
+  }
+  return res.status(500).json({ error: "Internal server error." });
 });
 
 app.listen(Number(process.env.PORT || 8787), () => {
