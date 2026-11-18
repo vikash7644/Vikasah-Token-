@@ -1,5 +1,6 @@
 import {
   BNB_TESTNET_CHAIN_ID,
+  buildSnapshot,
   formatUnits,
   parseDecimals,
   validateConfig,
@@ -7,6 +8,7 @@ import {
 } from "./core.mjs";
 
 const $ = (id) => document.getElementById(id);
+let latestSnapshot = null;
 
 async function rpc(url, method, params) {
   const response = await fetch(url, {
@@ -35,6 +37,8 @@ async function load() {
 
   validateConfig({ rpcUrl, token, owner, reserve });
   button.disabled = true;
+  $("export").disabled = true;
+  latestSnapshot = null;
   status.textContent = "Checking BNB Testnet…";
   try {
     const chain = await rpc(rpcUrl, "eth_chainId", []);
@@ -44,23 +48,31 @@ async function load() {
     const code = await rpc(rpcUrl, "eth_getCode", [token, "latest"]);
     if (code === "0x") throw new Error("No contract bytecode found at the token address.");
 
-    status.textContent = "Reading token supply and wallet balances…";
-    const [supplyHex, decimalsHex, ownerHex, reserveHex] = await Promise.all([
+    status.textContent = "Reading token supply, balances and block number…";
+    const [supplyHex, decimalsHex, ownerHex, reserveHex, blockHex] = await Promise.all([
       rpc(rpcUrl, "eth_call", [{ to: token, data: "0x18160ddd" }, "latest"]),
       rpc(rpcUrl, "eth_call", [{ to: token, data: "0x313ce567" }, "latest"]),
       rpc(rpcUrl, "eth_call", [{ to: token, data: callData("0x70a08231", owner) }, "latest"]),
-      rpc(rpcUrl, "eth_call", [{ to: token, data: callData("0x70a08231", reserve) }, "latest"])
+      rpc(rpcUrl, "eth_call", [{ to: token, data: callData("0x70a08231", reserve) }, "latest"]),
+      rpc(rpcUrl, "eth_blockNumber", [])
     ]);
     const decimals = parseDecimals(decimalsHex);
     const supply = BigInt(supplyHex);
     const ownerBalance = BigInt(ownerHex);
     const reserveBalance = BigInt(reserveHex);
+    const blockNumber = Number(BigInt(blockHex));
     validateSupply({ supply, ownerBalance, reserveBalance, decimals });
 
+    latestSnapshot = buildSnapshot({
+      token, owner, reserve, blockNumber, decimals, supply, ownerBalance, reserveBalance,
+      timestamp: new Date().toISOString()
+    });
     $("total").textContent = formatUnits(supply, decimals) + " VKT";
     $("total-sub").textContent = "On-chain total supply · " + decimals + " decimals";
     $("owner-balance").textContent = formatUnits(ownerBalance, decimals) + " VKT";
     $("reserve-balance").textContent = formatUnits(reserveBalance, decimals) + " VKT";
+    $("block").textContent = "Snapshot block: " + blockNumber.toLocaleString("en-US");
+    $("export").disabled = false;
     status.textContent = "Verified RPC response · BNB Testnet · updated " + new Date().toLocaleTimeString();
   } finally {
     button.disabled = false;
@@ -71,6 +83,19 @@ $("load").addEventListener("click", async () => {
   try {
     await load();
   } catch (error) {
+    latestSnapshot = null;
+    $("export").disabled = true;
     $("status").textContent = error instanceof Error ? error.message : "Unable to load on-chain data.";
   }
+});
+
+$("export").addEventListener("click", () => {
+  if (!latestSnapshot) return;
+  const blob = new Blob([JSON.stringify(latestSnapshot, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "vkt-treasury-snapshot-" + latestSnapshot.blockNumber + ".json";
+  link.click();
+  URL.revokeObjectURL(url);
 });
