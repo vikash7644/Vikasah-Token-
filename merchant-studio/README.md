@@ -44,7 +44,7 @@ The server proxy validates invoice inputs, applies a per-IP request limit, forwa
 
 ## Render deployment blueprint
 
-The repository-root `render.yaml` defines a free-tier web service with `merchant-studio/server` as its root directory. In Render, create a Blueprint from this repository and set `VKT_API_BASE_URL` and `MERCHANT_API_KEY` as private environment values. The `/health` endpoint is used for process health; `/ready` checks that the configured VKT API publishes BNB testnet configuration.
+The repository-root `render.yaml` defines a free-tier web service with `merchant-studio/server` as its root directory. In Render, create a Blueprint from this repository and set `VKT_API_BASE_URL` and `MERCHANT_API_KEY` as private environment values. The `/health` endpoint is used for process health; `/ready` checks the VKT API's public chain configuration and its own readiness result, including database access, BNB testnet RPC chain ID and deployed token bytecode.
 
 The free service may sleep when idle and is suitable only for development/testnet evaluation, not dependable payment processing. The VKT verifier API must be deployed separately with durable database storage before this service can complete invoice creation and settlement. No hosting service has been created or deployed by adding this blueprint.
 
