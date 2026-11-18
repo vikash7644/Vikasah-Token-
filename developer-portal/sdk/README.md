@@ -99,3 +99,13 @@ await withdrawal.wait();
 ```
 
 The SDK checks chain ID 97 and 18 token decimals, and never receives private keys. Approval and lock are separate wallet transactions. The contract, not the SDK, enforces the 180-day wait. If the underlying VKT token is paused, its transfer restrictions can prevent locking or withdrawal until transfers are unpaused. These actions are not usable until real verified testnet addresses exist; no address is supplied or assumed here.
+## Run SDK validation tests
+
+From this directory, run:
+
+```sh
+npm install
+npm test
+```
+
+The current tests cover malformed wallet/token addresses, missing signer state, zero/negative values, scientific notation, leading-zero amounts and precision beyond 18 decimals. These are input-validation tests; they do not replace wallet testing against a deployed testnet contract.
