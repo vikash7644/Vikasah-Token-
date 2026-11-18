@@ -90,6 +90,35 @@ test("rejects insecure non-local verifier URLs before making a request", async (
   );
 });
 
+for (const apiBaseUrl of [
+  "ftp://payments.example",
+  "https://user:password@payments.example",
+  "not-a-url",
+  "http://payments.example"
+]) {
+  test(`rejects unsafe verifier URL: ${apiBaseUrl}`, async () => {
+    await assert.rejects(
+      verifyVktPayment({
+        apiBaseUrl,
+        invoiceId: "order-1",
+        transactionHash: `0x${"a".repeat(64)}`
+      }),
+      /valid HTTPS URL/
+    );
+  });
+}
+
+test("rejects malformed transaction hashes before making a request", async () => {
+  await assert.rejects(
+    verifyVktPayment({
+      apiBaseUrl: "https://payments.example",
+      invoiceId: "order-1",
+      transactionHash: "0x1234"
+    }),
+    /valid API URL, invoice ID/
+  );
+});
+
 test("rejects malformed invoice identifiers before making a request", async () => {
   await assert.rejects(
     verifyVktPayment({
