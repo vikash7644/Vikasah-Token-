@@ -82,5 +82,5 @@ test("exports a quoted CSV with raw integer amounts", () => {
   assert.match(csv, /"totalSupplyRaw","1000"/);
   assert.match(csv, /"ownerBalanceRaw","300"/);
   assert.match(csv, /"reserveBalanceRaw","700"/);
-  assert.ok(csv.endsWith("\\r\\n"));
+  assert.ok(csv.endsWith("\r\n"));
 });
