@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node server.mjs",
     "test": "node --test",
-    "backup": "node backup.mjs"
+    "backup": "node backup.mjs",
+    "reconcile": "node reconcile.mjs"
   },
   "dependencies": {
     "better-sqlite3": "^11.8.1",
