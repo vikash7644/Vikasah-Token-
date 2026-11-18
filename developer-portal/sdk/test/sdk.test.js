@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { payVkt } from "../src/index.js";
+import { approveVktForPassport, lockVktInPassport, payVkt } from "../src/index.js";
 
 const validToken = "0x0000000000000000000000000000000000000001";
 const validMerchant = "0x0000000000000000000000000000000000000002";
@@ -46,5 +46,28 @@ test("accepts the smallest 18-decimal amount before network validation", async (
       amount: "0.000000000000000001"
     }),
     /Wrong network: BNB Smart Chain Testnet is required/
+  );
+});
+
+test("Passport lock rejects zero amount before wallet transaction", async () => {
+  await assert.rejects(
+    lockVktInPassport({
+      signer,
+      passportAddress: validToken,
+      amount: "0"
+    }),
+    /Amount must be a positive decimal/
+  );
+});
+
+test("Passport approval rejects precision beyond 18 decimals", async () => {
+  await assert.rejects(
+    approveVktForPassport({
+      signer,
+      tokenAddress: validToken,
+      passportAddress: validMerchant,
+      amount: "1.0000000000000000001"
+    }),
+    /Amount must be a positive decimal/
   );
 });
