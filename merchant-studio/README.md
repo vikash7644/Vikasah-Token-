@@ -42,6 +42,12 @@ The status API key is deliberately kept on the server. Do not add `MERCHANT_API_
 
 The server proxy validates invoice inputs, applies a per-IP request limit, forwards the secret only from the server, and returns stable errors. The browser never receives the merchant API key. Host the frontend and this proxy on the same origin; a static-only deployment does not provide these routes and cannot complete backend verification.
 
+## Render deployment blueprint
+
+The repository-root `render.yaml` defines a free-tier web service with `merchant-studio/server` as its root directory. In Render, create a Blueprint from this repository and set `VKT_API_BASE_URL` and `MERCHANT_API_KEY` as private environment values. The `/health` endpoint is used for process health; `/ready` checks that the configured VKT API publishes BNB testnet configuration.
+
+The free service may sleep when idle and is suitable only for development/testnet evaluation, not dependable payment processing. The VKT verifier API must be deployed separately with durable database storage before this service can complete invoice creation and settlement. No hosting service has been created or deployed by adding this blueprint.
+
 ## Test
 
 ```sh
