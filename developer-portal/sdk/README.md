@@ -36,9 +36,9 @@ console.log(address, result);
 
 ## Important
 - The token address above is a placeholder; VKT is not yet deployed to testnet.
-- Wallets must be on chain ID 97. The user approves each transfer in their wallet.
+- Wallets must be on chain ID 97. The user approves each transfer in their wallet. Pass token amounts as decimal strings (for example `"12.5"`), never JavaScript numbers, to avoid floating-point precision loss.
 - Never collect seed phrases or private keys.
-- A transaction hash alone is not proof of payment. Use a server verifier that checks the configured token, recipient, exact invoice amount, chain, confirmations and replay protection.
+- A transaction hash alone is not proof of payment. Use a server verifier that checks the configured token, recipient, exact invoice amount, chain, confirmations and replay protection. The SDK requires HTTPS for remote verifier URLs; plain HTTP is accepted only for localhost development.
 - This is an early testnet SDK starter, not audited or production-ready. Test with a disposable wallet and test tokens only.
 
 
