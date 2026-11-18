@@ -221,15 +221,23 @@ test("merchant can read invoice status only with the API key", async () => {
     headers: { authorization: `Bearer ${apiKey}` }
   });
   assert.equal(response.status, 200);
-  assert.deepEqual(await response.json(), {
+  const invoice = await response.json();
+  assert.deepEqual({
+    invoiceId: invoice.invoiceId,
+    amount: invoice.amount,
+    currency: invoice.currency,
+    payerAddress: invoice.payerAddress,
+    status: invoice.status,
+    transactionHash: invoice.transactionHash
+  }, {
     invoiceId: "order-status-read",
     amount: "2.75",
     currency: "VKT",
     payerAddress,
     status: "pending",
-    transactionHash: null,
-    createdAt: (await response.clone().json()).createdAt
+    transactionHash: null
   });
+  assert.equal(typeof invoice.createdAt, "string");
 });
 
 test("payment verification rejects malformed transaction hashes before RPC access", async () => {
