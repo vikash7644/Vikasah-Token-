@@ -8,6 +8,7 @@ A static, read-only dashboard for Vikasah Token on BNB Smart Chain Testnet (chai
 - ERC-20 `decimals()`
 - `balanceOf(ownerAllocationWallet)`
 - `balanceOf(distributionReserveWallet)`
+- The latest observed block number for the RPC snapshot
 
 It checks the configured RPC chain ID and verifies that token bytecode exists before reading data. It does not connect to a wallet, request signatures, send transactions, or hold credentials.
 
@@ -18,6 +19,8 @@ Serve this directory with any static HTTP server, then enter:
 2. The deployed VKT token contract address.
 3. The owner-allocation receiver address.
 4. The distribution-reserve receiver address.
+
+After a successful read, the dashboard can export a JSON snapshot containing the network, block number, capture time, entered addresses, raw integer values and formatted balances. Raw values are preserved so downstream tools do not need to parse rounded display values.
 
 The dashboard intentionally has no hard-coded contract or wallet addresses. Do not publish addresses until the deployment has been verified on-chain.
 
