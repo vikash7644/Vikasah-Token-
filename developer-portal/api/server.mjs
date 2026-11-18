@@ -124,6 +124,16 @@ app.use(express.json({ limit: "16kb" }));
 
 app.get("/health", (_req, res) => res.json({ ok: true, network: "bsc-testnet", chainId: 97 }));
 
+// Public chain metadata only; no secrets or merchant API credentials are exposed.
+app.get("/v1/config", (_req, res) => res.json({
+  network: "bsc-testnet",
+  chainId: 97,
+  tokenAddress,
+  merchantAddress,
+  tokenSymbol: "VKT",
+  tokenDecimals: 18
+}));
+
 app.get("/ready", async (_req, res) => {
   try {
     db.prepare("SELECT 1").get();
