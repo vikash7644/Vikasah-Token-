@@ -28,3 +28,13 @@ The dashboard intentionally has no hard-coded contract or wallet addresses. Do n
 - This is a transparency viewer, not an audited financial statement or proof of circulating supply.
 - Testnet balances have no monetary value.
 - No private key, seed phrase, wallet connection, or transaction permission is required.
+
+## Automated checks
+
+The repository test command also runs the monitor's dependency-free Node.js tests:
+
+```bash
+npm run test:treasury
+```
+
+These tests cover HTTPS and address validation, distinct allocation wallets, BNB Testnet chain ID configuration, decimal parsing, exact integer formatting, and supply/balance sanity checks. They do not require a deployed VKT contract or live RPC access.
