@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { approveVktForPassport, lockVktInPassport, payVkt } from "../src/index.js";
+import { approveVktForPassport, lockVktInPassport, payVkt, verifyVktPayment } from "../src/index.js";
 
 const validToken = "0x0000000000000000000000000000000000000001";
 const validMerchant = "0x0000000000000000000000000000000000000002";
@@ -69,5 +69,34 @@ test("Passport approval rejects precision beyond 18 decimals", async () => {
       amount: "1.0000000000000000001"
     }),
     /Amount must be a positive decimal/
+  );
+});
+
+test("rejects numeric SDK amounts to prevent floating-point precision loss", async () => {
+  await assert.rejects(
+    payVkt({ signer, tokenAddress: validToken, merchantAddress: validMerchant, amount: 1.25 }),
+    /decimal string/
+  );
+});
+
+test("rejects insecure non-local verifier URLs before making a request", async () => {
+  await assert.rejects(
+    verifyVktPayment({
+      apiBaseUrl: "http://payments.example",
+      invoiceId: "order-1",
+      transactionHash: `0x${"a".repeat(64)}`
+    }),
+    /valid HTTPS URL/
+  );
+});
+
+test("rejects malformed invoice identifiers before making a request", async () => {
+  await assert.rejects(
+    verifyVktPayment({
+      apiBaseUrl: "https://payments.example",
+      invoiceId: "../order",
+      transactionHash: `0x${"a".repeat(64)}`
+    }),
+    /valid API URL, invoice ID/
   );
 });
