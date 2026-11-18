@@ -21,7 +21,9 @@ function responseRecorder() {
   return {
     statusCode: 200,
     payload: null,
+    headers: {},
     status(code) { this.statusCode = code; return this; },
+    set(name, value) { this.headers[name.toLowerCase()] = value; return this; },
     json(payload) { this.payload = payload; return this; }
   };
 }
@@ -87,18 +89,75 @@ test("invoice creation forwards the merchant key only from server-side proxy", a
   assert.equal(JSON.stringify(res.payload).includes(apiKey), false);
 });
 
+test("duplicate invoice retries are reused only for the same pending payer and amount", async () => {
+  let calls = 0;
+  const routes = harness(async (url, options) => {
+    calls += 1;
+    if (String(url).endsWith("/v1/invoices") && options.method === "POST") {
+      return { status: 409, json: async () => ({ error: "Invoice ID already exists." }) };
+    }
+    return {
+      status: 200,
+      json: async () => ({
+        invoiceId: "order-retry",
+        amount: "1.250000000000000000",
+        payerAddress,
+        status: "pending"
+      })
+    };
+  });
+  const res = responseRecorder();
+  await routes.get("POST /api/vkt/invoices")({
+    body: { invoiceId: "order-retry", amount: "1.25", payerAddress }
+  }, res);
+  assert.equal(res.statusCode, 200);
+  assert.deepEqual(res.payload, {
+    invoiceId: "order-retry",
+    amount: "1.250000000000000000",
+    currency: "VKT",
+    status: "pending",
+    reused: true
+  });
+  assert.equal(calls, 2);
+});
+
+test("duplicate invoice cannot be reused by another payer", async () => {
+  const routes = harness(async (url, options) => {
+    if (options.method === "POST") return { status: 409, json: async () => ({ error: "duplicate" }) };
+    return {
+      status: 200,
+      json: async () => ({
+        invoiceId: "order-retry",
+        amount: "1",
+        payerAddress: "0x0000000000000000000000000000000000000004",
+        status: "pending"
+      })
+    };
+  });
+  const res = responseRecorder();
+  await routes.get("POST /api/vkt/invoices")({
+    body: { invoiceId: "order-retry", amount: "1", payerAddress }
+  }, res);
+  assert.equal(res.statusCode, 409);
+  assert.deepEqual(res.payload, {
+    error: "Invoice ID already exists with different details or is already paid."
+  });
+});
+
 test("invoice status lookup forwards bearer auth and encodes the invoice id", async () => {
   let captured;
   const routes = harness(async (url, options) => {
     captured = { url: String(url), options };
-    return { status: 200, json: async () => ({ status: "paid" }) };
+    return { status: 200, json: async () => ({ status: "paid", payerAddress, amount: "1.5" }) };
   });
   const res = responseRecorder();
   await routes.get("GET /api/vkt/invoices/:invoiceId")({ params: { invoiceId: "order-1" } }, res);
   assert.equal(res.statusCode, 200);
   assert.equal(captured.url, "https://payments.example/v1/invoices/order-1");
   assert.equal(captured.options.headers.authorization, "Bearer " + apiKey);
-  assert.deepEqual(res.payload, { status: "paid" });
+  assert.deepEqual(res.payload, { status: "paid", amount: "1.5" });
+  assert.equal("payerAddress" in res.payload, false);
+  assert.equal(res.headers["cache-control"], "no-store");
 });
 
 test("payment verification forwards no merchant secret", async () => {
