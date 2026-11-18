@@ -20,6 +20,7 @@ if (!isAddress(process.env.VKT_TOKEN_ADDRESS) || !isAddress(process.env.VKT_MERC
 }
 const tokenAddress = getAddress(process.env.VKT_TOKEN_ADDRESS);
 const merchantAddress = getAddress(process.env.VKT_MERCHANT_ADDRESS);
+const maxSupplyWei = parseUnits("1000000000", 18);
 const minConfirmations = Number(process.env.MIN_CONFIRMATIONS || 3);
 if (!Number.isSafeInteger(minConfirmations) || minConfirmations < 1) throw new Error("MIN_CONFIRMATIONS must be a positive integer.");
 const provider = new JsonRpcProvider(process.env.BSC_TESTNET_RPC_URL, 97);
@@ -83,6 +84,7 @@ app.post("/v1/invoices", (req, res) => {
   try {
     const amountWei = parseUnits(amount, 18);
     if (amountWei <= 0n) return res.status(400).json({ error: "amount must be greater than zero." });
+    if (amountWei > maxSupplyWei) return res.status(400).json({ error: "amount cannot exceed the fixed VKT maximum supply of 1000000000." });
     insertInvoice.run(invoiceId, amountWei.toString(), getAddress(payerAddress));
     return res.status(201).json({ invoiceId, amount, currency: "VKT", status: "pending" });
   } catch (error) {
