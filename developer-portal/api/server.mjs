@@ -241,6 +241,26 @@ app.use((error, _req, res, _next) => {
   return res.status(500).json({ error: "Internal server error." });
 });
 
-app.listen(Number(process.env.PORT || 8787), () => {
+const server = app.listen(Number(process.env.PORT || 8787), () => {
   console.log(`VKT testnet verifier listening on port ${process.env.PORT || 8787}`);
 });
+
+let shuttingDown = false;
+function shutdown(signal) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`Received ${signal}; closing VKT verifier gracefully.`);
+  server.close(async error => {
+    try {
+      await provider.destroy();
+    } finally {
+      if (db.open) db.close();
+      if (error) {
+        console.error("HTTP server shutdown failed.");
+        process.exitCode = 1;
+      }
+    }
+  });
+}
+process.once("SIGTERM", () => shutdown("SIGTERM"));
+process.once("SIGINT", () => shutdown("SIGINT"));
