@@ -174,7 +174,7 @@ app.post("/v1/invoices", (req, res) => {
 
 app.get("/v1/invoices/:invoiceId", (req, res) => {
   const authorization = req.get("authorization");
-  const bearerMatch = typeof authorization === "string" ? authorization.match(/^Bearer (\\S+)$/i) : null;
+  const bearerMatch = typeof authorization === "string" ? authorization.match(/^Bearer (\S+)$/i) : null;
   if (!hasValidMerchantApiKey(bearerMatch?.[1])) {
     return res.status(401).json({ error: "Unauthorized" });
   }
