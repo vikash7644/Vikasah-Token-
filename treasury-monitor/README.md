@@ -20,7 +20,7 @@ Serve this directory with any static HTTP server, then enter:
 3. The owner-allocation receiver address.
 4. The distribution-reserve receiver address.
 
-After a successful read, the dashboard can export JSON and CSV snapshots containing the network, block number and hash, capture time, entered addresses, raw integer values and formatted balances. Both formats retain raw integer values for accurate downstream processing. Every contract read in one snapshot uses the same block tag to avoid mixing values from different blocks. The monitor rechecks that block hash after reading and discards the snapshot if the block changed during collection (for example, during a reorganization). Raw values are preserved so downstream tools do not need to parse rounded display values.
+After a successful read, the dashboard can export JSON and CSV snapshots containing the network, block number and hash, on-chain block timestamp, capture time, entered addresses, raw integer values and formatted balances. Both formats retain raw integer values for accurate downstream processing. Every contract read in one snapshot uses the same block tag to avoid mixing values from different blocks. The monitor rechecks that block hash after reading and discards the snapshot if the block changed during collection (for example, during a reorganization). Raw values are preserved so downstream tools do not need to parse rounded display values.
 
 The dashboard intentionally has no hard-coded contract or wallet addresses. Do not publish addresses until the deployment has been verified on-chain.
 
