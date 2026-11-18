@@ -7,7 +7,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import Database from "better-sqlite3";
 
-const apiKey = "test-only-vkt-api-key";
+const apiKey = "test-only-vkt-api-key-with-32-plus-bytes";
 const tokenAddress = "0x0000000000000000000000000000000000000001";
 const merchantAddress = "0x0000000000000000000000000000000000000002";
 const payerAddress = "0x0000000000000000000000000000000000000003";
@@ -94,6 +94,19 @@ test("invoice creation rejects missing or incorrect merchant authorization", asy
     body: JSON.stringify({ invoiceId: "order-unauthorized", amount: "5.25", payerAddress })
   });
   assert.equal(response.status, 401);
+});
+
+test("invoice creation rejects an incorrect merchant API key", async () => {
+  const response = await fetch(`${baseUrl}/v1/invoices`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: "Bearer definitely-the-wrong-key"
+    },
+    body: JSON.stringify({ invoiceId: "order-wrong-key", amount: "1", payerAddress })
+  });
+  assert.equal(response.status, 401);
+  assert.deepEqual(await response.json(), { error: "Unauthorized" });
 });
 
 test("invoice creation validates identifiers, payer and positive decimal amounts", async () => {
