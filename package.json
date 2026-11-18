@@ -5,8 +5,9 @@
   "description": "Vikasah Token (VKT), a fixed-supply BEP-20/ERC-20 token project",
   "scripts": {
     "compile": "hardhat compile",
-    "test": "hardhat test",
-    "deploy:testnet": "hardhat run scripts/deploy.js --network bscTestnet"
+    "test": "hardhat test && npm run test:treasury",
+    "deploy:testnet": "hardhat run scripts/deploy.js --network bscTestnet",
+    "test:treasury": "node --test treasury-monitor/*.test.mjs"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
