@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#100d1e">
+  <meta name="description" content="Read-only Vikasah Token treasury and allocation monitor for BNB Smart Chain.">
+  <title>VKT Treasury Monitor</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script src="./app.js" defer></script>
+</head>
+<body>
+  <header class="topbar"><a class="brand" href="./"> <span class="mark">V</span><span>VIKASAH <small>TOKEN</small></span></a><span class="network"><i></i> BNB Smart Chain Testnet</span></header>
+  <main>
+    <section class="hero">
+      <p class="eyebrow">PUBLIC TRANSPARENCY DASHBOARD</p>
+      <h1>VKT Treasury <em>&amp;</em> Allocation</h1>
+      <p class="intro">A read-only view of on-chain supply and the two separate allocation wallets. No wallet connection or transaction signing required.</p>
+    </section>
+    <section class="panel config" aria-labelledby="config-title">
+      <div class="section-head"><div><p class="eyebrow">READ-ONLY CONFIGURATION</p><h2 id="config-title">Connect public contract data</h2></div><span class="pill">No private keys</span></div>
+      <label>BNB Testnet RPC URL<input id="rpc" type="url" value="https://bsc-testnet-dataseed.bnbchain.org" autocomplete="url"></label>
+      <label>VKT token contract address<input id="token" type="text" placeholder="0x… verified token contract" spellcheck="false" autocomplete="off"></label>
+      <div class="two">
+        <label>Owner allocation wallet (30%)<input id="owner" type="text" placeholder="0x… owner allocation receiver" spellcheck="false" autocomplete="off"></label>
+        <label>Distribution reserve wallet (70%)<input id="reserve" type="text" placeholder="0x… reserve receiver" spellcheck="false" autocomplete="off"></label>
+      </div>
+      <div class="actions"><button id="load" type="button">Load on-chain data</button><span id="status" role="status" aria-live="polite">Enter verified addresses to begin.</span></div>
+      <p class="hint">Use only addresses verified against the deployed contract. Values are not shown until the RPC confirms BNB Testnet chain ID 97.</p>
+    </section>
+    <section class="metrics" aria-label="Token supply metrics">
+      <article class="metric"><span>Maximum supply</span><strong>1,000,000,000</strong><small>VKT · fixed cap</small></article>
+      <article class="metric"><span>On-chain total supply</span><strong id="total">—</strong><small id="total-sub">Awaiting verified RPC data</small></article>
+      <article class="metric"><span>Owner allocation balance</span><strong id="owner-balance">—</strong><small>30% initial allocation</small></article>
+      <article class="metric"><span>Distribution reserve balance</span><strong id="reserve-balance">—</strong><small>70% initial allocation</small></article>
+    </section>
+    <section class="panel split">
+      <div class="section-head"><div><p class="eyebrow">INITIAL SUPPLY DESIGN</p><h2>Allocation separation</h2></div><span class="pill">1B VKT cap</span></div>
+      <div class="bar" role="img" aria-label="Initial supply: 30 percent owner allocation and 70 percent distribution reserve"><span></span></div>
+      <div class="legend"><p><b class="dot gold"></b><strong>30%</strong><span>Owner allocation</span><strong>300,000,000 VKT</strong></p><p><b class="dot violet"></b><strong>70%</strong><span>Distribution reserve</span><strong>700,000,000 VKT</strong></p></div>
+      <p class="hint">These are the initial allocation targets, not live balances. Live wallet balances above are read directly from the configured contract and addresses.</p>
+    </section>
+    <footer><span>VKT · BNB Smart Chain</span><span>Read-only · No custody · No yield promises</span></footer>
+  </main>
+</body>
+</html>
