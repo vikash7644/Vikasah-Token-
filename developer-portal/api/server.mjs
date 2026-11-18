@@ -27,10 +27,19 @@ if (tokenAddress === zeroAddress || merchantAddress === zeroAddress || tokenAddr
 const maxSupplyWei = parseUnits("1000000000", 18);
 const minConfirmations = Number(process.env.MIN_CONFIRMATIONS || 3);
 if (!Number.isSafeInteger(minConfirmations) || minConfirmations < 1) throw new Error("MIN_CONFIRMATIONS must be a positive integer.");
+const verifyRateLimit = Number(process.env.VERIFY_RATE_LIMIT_PER_MINUTE || 120);
+if (!Number.isSafeInteger(verifyRateLimit) || verifyRateLimit < 1) {
+  throw new Error("VERIFY_RATE_LIMIT_PER_MINUTE must be a positive integer.");
+}
 const provider = new JsonRpcProvider(process.env.BSC_TESTNET_RPC_URL, 97);
 const db = new Database(process.env.DATABASE_PATH || "./vkt-payments.sqlite");
 db.pragma("journal_mode = WAL");
 db.exec(`
+  CREATE TABLE IF NOT EXISTS api_rate_limits (
+    id TEXT PRIMARY KEY CHECK (id = 'verify'),
+    window_started_at INTEGER NOT NULL,
+    request_count INTEGER NOT NULL
+  );
   CREATE TABLE IF NOT EXISTS invoices (
     id TEXT PRIMARY KEY,
     amount_wei TEXT NOT NULL,
@@ -65,6 +74,20 @@ const settleInvoice = db.transaction((transactionHash, invoiceId, blockNumber, b
   if (changed.changes !== 1) return { outcome: "conflict" };
   return { outcome: "paid" };
 });
+const consumeVerifyRateLimit = db.prepare(`
+  INSERT INTO api_rate_limits (id, window_started_at, request_count)
+  VALUES ('verify', ?, 1)
+  ON CONFLICT(id) DO UPDATE SET
+    request_count = CASE
+      WHEN api_rate_limits.window_started_at <= ? THEN 1
+      ELSE api_rate_limits.request_count + 1
+    END,
+    window_started_at = CASE
+      WHEN api_rate_limits.window_started_at <= ? THEN excluded.window_started_at
+      ELSE api_rate_limits.window_started_at
+    END
+  RETURNING request_count, window_started_at
+`);
 const iface = new Interface(["event Transfer(address indexed from, address indexed to, uint256 value)"]);
 const app = express();
 app.use(express.json({ limit: "16kb" }));
@@ -103,6 +126,13 @@ app.post("/v1/invoices", (req, res) => {
 });
 
 app.post("/v1/payments/verify", async (req, res) => {
+  const now = Date.now();
+  const rate = consumeVerifyRateLimit.get(now, now - 60_000, now - 60_000);
+  if (rate.request_count > verifyRateLimit) {
+    const retryAfter = Math.max(1, Math.ceil((rate.window_started_at + 60_000 - now) / 1000));
+    res.set("Retry-After", String(retryAfter));
+    return res.status(429).json({ error: "Verification rate limit exceeded. Retry later." });
+  }
   const { invoiceId, transactionHash } = req.body || {};
   if (typeof invoiceId !== "string" || !/^[a-zA-Z0-9_-]{1,80}$/.test(invoiceId) ||
       typeof transactionHash !== "string" || !/^0x[a-fA-F0-9]{64}$/.test(transactionHash)) {
