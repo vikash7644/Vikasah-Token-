@@ -44,3 +44,10 @@ The backup command uses SQLite's online backup API, so it produces a consistent 
 - Reorg reconciliation is a basic safety layer, not a complete chain-finality guarantee. Production still needs a defined finality policy, periodic background reconciliation for every paid invoice, durable audit logs, authenticated status access, rate limiting, monitoring, backups, and independent security review.
 - Do not expose the merchant API key in browser code.
 - Never request or store customer private keys or seed phrases.
+
+
+## Scheduled payment reconciliation
+
+Run `npm run reconcile` from this API package on a scheduler (for example, every 5 minutes) using the same `BSC_TESTNET_RPC_URL` and persistent `DATABASE_PATH` as the API. The job checks the canonical block hash for each paid invoice. If a previously recorded block is now present with a different hash, the invoice is returned to `pending` so it can be verified again. RPC errors and missing block responses are treated as inconclusive and do not alter invoice state.
+
+This is a reorg-recovery safeguard, not a guarantee of finality or a substitute for a production-grade chain indexer. Run only one reconciliation job at a time against a given SQLite database. Backups should be copied off the application disk to separate durable storage; a local backup on the same disk does not protect against disk loss.
