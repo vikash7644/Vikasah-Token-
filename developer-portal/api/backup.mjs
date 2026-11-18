@@ -14,7 +14,16 @@ await mkdir(dirname(backupPath), { recursive: true });
 const database = new Database(sourcePath, { readonly: true, fileMustExist: true });
 try {
   await database.backup(backupPath);
-  console.log("SQLite backup completed.");
+  const backup = new Database(backupPath, { readonly: true, fileMustExist: true });
+  try {
+    const integrity = backup.pragma("integrity_check", { simple: true });
+    if (integrity !== "ok") {
+      throw new Error("SQLite backup integrity check failed.");
+    }
+  } finally {
+    backup.close();
+  }
+  console.log("SQLite backup completed and integrity-checked.");
 } finally {
   database.close();
 }
