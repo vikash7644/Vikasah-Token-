@@ -100,7 +100,7 @@ function requireContractAddress(label, value) {
 
 function requirePositiveTokenAmount(value) {
   const amountText = String(value);
-  if (!/^(?:0|[1-9]\\d*)(?:\\.\\d{1,18})?$/.test(amountText) || !/[1-9]/.test(amountText)) {
+  if (!/^(?:0|[1-9]\d*)(?:\.\d{1,18})?$/.test(amountText) || !/[1-9]/.test(amountText)) {
     throw new Error("Amount must be a positive decimal with at most 18 places.");
   }
   return amountText;
