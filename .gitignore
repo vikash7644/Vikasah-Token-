@@ -6,3 +6,6 @@ artifacts/
 cache/
 coverage/
 typechain-types/
+
+# Local deployment records are generated after broadcasting a transaction.
+deployments/*.json
