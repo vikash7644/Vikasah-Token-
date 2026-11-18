@@ -56,7 +56,7 @@ npm install
 npm test
 ```
 
-The proxy tests use a mocked upstream API; they do not claim that a live contract or testnet payment has been tested.
+The proxy and server integration tests use a mocked upstream API; they cover route validation, secret forwarding, readiness gating and static-file exposure. They do not claim that a live contract or testnet payment has been tested.
 
 ## Safety and current limitations
 
