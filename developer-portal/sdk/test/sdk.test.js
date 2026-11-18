@@ -35,3 +35,16 @@ test("requires a connected signer", async () => {
     /Connect a wallet first/
   );
 });
+
+test("accepts the smallest 18-decimal amount before network validation", async () => {
+  const wrongNetworkSigner = { provider: { getNetwork: async () => ({ chainId: 56n }) } };
+  await assert.rejects(
+    payVkt({
+      signer: wrongNetworkSigner,
+      tokenAddress: validToken,
+      merchantAddress: validMerchant,
+      amount: "0.000000000000000001"
+    }),
+    /Wrong network: BNB Smart Chain Testnet is required/
+  );
+});
