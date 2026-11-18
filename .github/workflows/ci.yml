@@ -25,3 +25,15 @@ jobs:
         run: npm run compile
       - name: Run tests
         run: npm test
+
+      - name: Check Developer Portal JavaScript syntax
+        run: |
+          node --check developer-portal/app.js
+          node --check developer-portal/sdk/src/index.js
+          node --check developer-portal/api/server.mjs
+      - name: Install Developer Portal SDK dependencies
+        working-directory: developer-portal/sdk
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Install Developer Portal API dependencies
+        working-directory: developer-portal/api
+        run: npm install --no-audit --no-fund

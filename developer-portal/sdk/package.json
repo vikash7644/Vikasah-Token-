@@ -1,0 +1,17 @@
+{
+  "name": "@vikasah/vkt-checkout",
+  "version": "0.1.0",
+  "description": "Non-custodial browser helpers for Vikasah Token testnet checkout",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "peerDependencies": {
+    "ethers": "^6.13.0"
+  },
+  "license": "MIT",
+  "scripts": {
+    "test": "node --test"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "name": "vkt-payment-verifier",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test",
+    "backup": "node backup.mjs",
+    "reconcile": "node reconcile.mjs",
+    "restore": "node restore.mjs"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.8.1",
+    "dotenv": "^16.4.5",
+    "ethers": "^6.13.0",
+    "express": "^4.21.2"
+  }
+}

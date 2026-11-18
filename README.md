@@ -25,6 +25,12 @@ The 30% owner allocation is a normal ERC-20 balance held at the configured owner
 - Separate owner allocation and distribution reserve; no automatic liquidity/staking integration
 - Hard cap and no mint entry point
 
+## 180-day Utility Passport
+
+A separate user-controlled vault is being developed in `contracts/VKTUtilityPassport.sol`. Each wallet can lock a chosen VKT amount for exactly 180 days, read its active position, and withdraw only after expiry. It has no owner/admin, confiscation, rescue, or early-unlock method. The underlying VKT token's global pause can still temporarily prevent token transfers; see [the Utility Passport trust model](docs/VKT-UTILITY-PASSPORT.md).
+
+This contract is source/test work only and has not been deployed. Access-tier thresholds and merchant benefits remain undecided.
+
 ## Build and test
 
 Requires Node.js 20 or newer.
@@ -46,6 +52,18 @@ npm test
 - Testnet chain ID: 97
 - RPC: https://bsc-testnet-dataseed.bnbchain.org
 - Explorer: https://testnet.bscscan.com/
+
+### Utility Passport testnet deployment
+
+Only after the VKT token itself has been deployed and its address independently verified on BSC Testnet:
+
+1. Set `VKT_TOKEN_ADDRESS` in the ignored local `.env` file. Do not use a placeholder or an address copied from an unverified source.
+2. Confirm the deployer wallet is a dedicated test wallet with a small amount of testnet BNB for gas.
+3. Run `npm run deploy:passport:testnet`.
+4. Save the printed Passport address and verify its source on BscScan Testnet.
+5. Test approval, locking, the full 180-day expiry behavior on a test environment, and withdrawal before any app relies on Passport status.
+
+The script checks chain ID 97, token contract code, VKT name/symbol/decimals/supply, and the deployed Passport's linked token and lock duration. It does not deploy the VKT token, fund wallets, or transfer VKT. Deployment creates a public on-chain contract and is not run automatically by CI.
 
 ## Security and launch status
 
