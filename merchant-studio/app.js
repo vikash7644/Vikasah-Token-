@@ -80,15 +80,7 @@ async function payInvoice(){
   const payerAddress=await signer.getAddress();
   const createResponse=await fetch("/api/vkt/invoices",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({invoiceId:invoice.invoiceId,amount:invoice.amount,payerAddress})});
   const created=await createResponse.json().catch(()=>({}));
-  if(!createResponse.ok){
-   if(createResponse.status===409){
-    const existingResponse=await fetch("/api/vkt/invoices/"+encodeURIComponent(invoice.invoiceId));
-    const existing=await existingResponse.json().catch(()=>({}));
-    if(!existingResponse.ok||existing.payerAddress?.toLowerCase()!==payerAddress.toLowerCase()||ethers.parseUnits(existing.amount,18)!==ethers.parseUnits(invoice.amount,18)||existing.status!=="pending"){
-     throw Error("This invoice ID is already registered with different details or has already been paid. Create a new invoice.");
-    }
-   }else throw Error(created.error||"Could not register invoice with the merchant verifier.");
-  }
+  if(!createResponse.ok)throw Error(created.error||"Could not register invoice with the merchant verifier.");
   const contract=new ethers.Contract(invoice.token,ABI,signer),value=ethers.parseUnits(invoice.amount,18);
   setStatus("Confirm the VKT transfer in your wallet. Check recipient and amount before signing.");
   const tx=await contract.transfer(invoice.merchant,value);
