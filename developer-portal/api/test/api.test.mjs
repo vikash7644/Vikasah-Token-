@@ -116,6 +116,19 @@ test("readiness endpoint fails closed when the testnet RPC is unavailable", asyn
   assert.deepEqual(await response.json(), { ok: false, ready: false, reason: "Database or testnet RPC is not ready." });
 });
 
+test("public checkout config exposes only network and token routing metadata", async () => {
+  const response = await fetch(`${baseUrl}/v1/config`);
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    network: "bsc-testnet",
+    chainId: 97,
+    tokenAddress,
+    merchantAddress,
+    tokenSymbol: "VKT",
+    tokenDecimals: 18
+  });
+});
+
 test("health endpoint identifies BNB Smart Chain Testnet", async () => {
   const response = await fetch(`${baseUrl}/health`);
   assert.equal(response.status, 200);
