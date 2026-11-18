@@ -205,6 +205,33 @@ test("concurrent duplicate invoice requests create exactly one invoice", async (
   assert.deepEqual(statuses, [201, 409, 409, 409, 409, 409, 409, 409]);
 });
 
+test("merchant can read invoice status only with the API key", async () => {
+  const headers = { "content-type": "application/json", authorization: `Bearer ${apiKey}` };
+  const created = await fetch(`${baseUrl}/v1/invoices`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ invoiceId: "order-status-read", amount: "2.75", payerAddress })
+  });
+  assert.equal(created.status, 201);
+
+  const unauthorized = await fetch(`${baseUrl}/v1/invoices/order-status-read`);
+  assert.equal(unauthorized.status, 401);
+
+  const response = await fetch(`${baseUrl}/v1/invoices/order-status-read`, {
+    headers: { authorization: `Bearer ${apiKey}` }
+  });
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    invoiceId: "order-status-read",
+    amount: "2.75",
+    currency: "VKT",
+    payerAddress,
+    status: "pending",
+    transactionHash: null,
+    createdAt: (await response.clone().json()).createdAt
+  });
+});
+
 test("payment verification rejects malformed transaction hashes before RPC access", async () => {
   const response = await fetch(`${baseUrl}/v1/payments/verify`, {
     method: "POST",
