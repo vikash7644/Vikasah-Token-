@@ -1,5 +1,6 @@
 import {
   BNB_TESTNET_CHAIN_ID,
+  assertSameBlock,
   buildSnapshot,
   formatUnits,
   parseDecimals,
@@ -61,6 +62,8 @@ async function load() {
       rpc(rpcUrl, "eth_call", [{ to: token, data: callData("0x70a08231", owner) }, blockTag]),
       rpc(rpcUrl, "eth_call", [{ to: token, data: callData("0x70a08231", reserve) }, blockTag])
     ]);
+    const finalBlock = await rpc(rpcUrl, "eth_getBlockByNumber", [blockTag, false]);
+    assertSameBlock(block.hash, finalBlock?.hash);
     const decimals = parseDecimals(decimalsHex);
     const supply = BigInt(supplyHex);
     const ownerBalance = BigInt(ownerHex);
