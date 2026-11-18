@@ -51,3 +51,14 @@ The backup command uses SQLite's online backup API, so it produces a consistent 
 Run `npm run reconcile` from this API package on a scheduler (for example, every 5 minutes) using the same `BSC_TESTNET_RPC_URL` and persistent `DATABASE_PATH` as the API. The job checks the canonical block hash for each paid invoice. If a previously recorded block is now present with a different hash, the invoice is returned to `pending` so it can be verified again. RPC errors and missing block responses are treated as inconclusive and do not alter invoice state.
 
 This is a reorg-recovery safeguard, not a guarantee of finality or a substitute for a production-grade chain indexer. Run only one reconciliation job at a time against a given SQLite database. Backups should be copied off the application disk to separate durable storage; a local backup on the same disk does not protect against disk loss.
+
+
+## Restore drill (non-destructive)
+
+Restore a verified backup to a **new, empty destination path**:
+
+```sh
+npm run restore -- /var/data/backups/vkt-payments.sqlite /var/data/restore-drill/vkt-payments.sqlite
+```
+
+The command validates the source integrity and required invoice schema, creates the destination only if it does not already exist, and validates the restored copy again. It deliberately refuses to overwrite an existing destination and never changes `DATABASE_PATH` or the live service database. Run restore drills against a separate path and inspect the restored invoice data before planning any controlled recovery. This script does not switch production traffic or replace the live database.
