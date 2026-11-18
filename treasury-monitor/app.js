@@ -40,6 +40,7 @@ async function load() {
   validateConfig({ rpcUrl, token, owner, reserve });
   button.disabled = true;
   $("export").disabled = true;
+  $("export-csv").disabled = true;
   latestSnapshot = null;
   status.textContent = "Checking BNB Testnet…";
   try {
@@ -81,6 +82,7 @@ async function load() {
     $("reserve-balance").textContent = formatUnits(reserveBalance, decimals) + " VKT";
     $("block").textContent = "Snapshot block: " + blockNumber.toLocaleString("en-US");
     $("export").disabled = false;
+    $("export-csv").disabled = false;
     status.textContent = "Verified RPC response · BNB Testnet · updated " + new Date().toLocaleTimeString();
   } finally {
     button.disabled = false;
@@ -93,6 +95,7 @@ $("load").addEventListener("click", async () => {
   } catch (error) {
     latestSnapshot = null;
     $("export").disabled = true;
+    $("export-csv").disabled = true;
     $("status").textContent = error instanceof Error ? error.message : "Unable to load on-chain data.";
   }
 });
