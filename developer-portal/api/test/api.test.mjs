@@ -114,6 +114,7 @@ test("invoice creation validates identifiers, payer and positive decimal amounts
   const invalidCases = [
     { invoiceId: "../bad", amount: "5.25", payerAddress },
     { invoiceId: "bad-payer", amount: "5.25", payerAddress: "not-an-address" },
+    { invoiceId: "zero-payer", amount: "5.25", payerAddress: "0x0000000000000000000000000000000000000000" },
     { invoiceId: "zero-amount", amount: "0", payerAddress },
     { invoiceId: "negative-amount", amount: "-1", payerAddress },
     { invoiceId: "too-many-decimals", amount: "1.0000000000000000001", payerAddress },
@@ -207,4 +208,43 @@ test("payment verification returns 404 for unknown invoices", async () => {
   });
   assert.equal(response.status, 404);
   assert.deepEqual(await response.json(), { error: "Invoice not found." });
+});
+
+
+test("invoice creation accepts a case-insensitive Bearer scheme", async () => {
+  const response = await fetch(`${baseUrl}/v1/invoices`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `bearer ${apiKey}`
+    },
+    body: JSON.stringify({ invoiceId: "order-lowercase-bearer", amount: "1", payerAddress })
+  });
+  assert.equal(response.status, 201);
+});
+
+test("malformed JSON receives a stable JSON client error", async () => {
+  const response = await fetch(`${baseUrl}/v1/invoices`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${apiKey}`
+    },
+    body: "{invalid"
+  });
+  assert.equal(response.status, 400);
+  assert.deepEqual(await response.json(), { error: "Request body must contain valid JSON." });
+});
+
+test("oversized JSON receives a stable JSON client error", async () => {
+  const response = await fetch(`${baseUrl}/v1/invoices`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({ padding: "x".repeat(17_000) })
+  });
+  assert.equal(response.status, 413);
+  assert.deepEqual(await response.json(), { error: "Request body is too large." });
 });
