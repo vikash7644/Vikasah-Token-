@@ -53,7 +53,7 @@ export function validateSupply({ supply, ownerBalance, reserveBalance, decimals 
   return true;
 }
 
-export function buildSnapshot({ token, owner, reserve, blockNumber, blockHash, decimals, supply, ownerBalance, reserveBalance, timestamp }) {
+export function buildSnapshot({ token, owner, reserve, blockNumber, blockHash, blockTimestamp, decimals, supply, ownerBalance, reserveBalance, timestamp }) {
   return {
     schema: "vkt-treasury-snapshot/v1",
     network: "BNB Smart Chain Testnet",
@@ -61,6 +61,7 @@ export function buildSnapshot({ token, owner, reserve, blockNumber, blockHash, d
     capturedAt: timestamp,
     blockNumber,
     blockHash,
+    blockTimestamp,
     tokenContract: token,
     ownerAllocationWallet: owner,
     distributionReserveWallet: reserve,
@@ -92,6 +93,7 @@ export function snapshotToCsv(snapshot) {
     ["capturedAt", snapshot.capturedAt],
     ["blockNumber", snapshot.blockNumber],
     ["blockHash", snapshot.blockHash],
+    ["blockTimestamp", snapshot.blockTimestamp],
     ["tokenContract", snapshot.tokenContract],
     ["ownerAllocationWallet", snapshot.ownerAllocationWallet],
     ["distributionReserveWallet", snapshot.distributionReserveWallet],
