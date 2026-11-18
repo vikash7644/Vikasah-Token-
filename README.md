@@ -41,7 +41,10 @@ npm test
 2. Use separate, controlled addresses for the admin owner, owner allocation receiver and reserve receiver.
 3. Keep private keys only in a local ignored `.env` file or GitHub Actions secrets. Never commit them or send them in chat.
 4. Fund the deployer with BNB testnet gas.
-5. Run `npm run deploy:testnet`.
+5. Run `npm run preflight:testnet` first. This checks the chain ID, all configured addresses, estimated deployment gas and deployer balance with a 20% buffer. It sends no transaction.
+6. Only after reviewing the preflight output, run `npm run deploy:testnet` to broadcast the deployment transaction.
+
+After a successful deployment, the script writes a local `deployments/bsc-testnet.json` record containing the contract address, transaction hash, block number, wallet allocation addresses and verified supply balances. It first records the mined deployment as `deployed_unverified`, then updates the status after checking the 30% / 70% allocation invariants. The JSON file is ignored by Git by default; review it and independently verify the address on BscScan before choosing to publish it. The record never contains a private key. Set `DEPLOYMENT_RECORD_PATH` to choose another local output path. After deployment, run `npm run verify:testnet` with `BSC_TESTNET_RPC_URL` set. This is read-only and does not require `DEPLOYER_PRIVATE_KEY`; it checks the deployed bytecode, chain ID, token metadata, admin owner, fixed supply and both allocation balances, then stamps the local record with `verifiedAt`.
 
 - Testnet chain ID: 97
 - RPC: https://bsc-testnet-dataseed.bnbchain.org
@@ -49,6 +52,6 @@ npm test
 
 ## Security and launch status
 
-This is a development/testnet starting point, not an audited or production-ready token. CI compilation and tests must pass before testnet deployment. Obtain an independent smart-contract audit, verify deployed source, confirm distribution/vesting wallets, and complete legal and operational reviews before mainnet launch. Testnet tokens have no monetary value. Token creation or exchange listing does not guarantee buyers, price appreciation, or profit.
+This is a development/testnet starting point, not an audited or production-ready token. CI compilation and tests must pass before testnet deployment. Run the non-transactional testnet preflight and independently verify every wallet address before broadcasting a deployment transaction. Obtain an independent smart-contract audit, verify deployed source, confirm distribution/vesting wallets, and complete legal and operational reviews before mainnet launch. Testnet tokens have no monetary value. Token creation or exchange listing does not guarantee buyers, price appreciation, or profit.
 
 Mainnet deployment, liquidity creation, token sale, and exchange listing are not performed by this repository's CI workflow.

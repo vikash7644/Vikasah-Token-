@@ -21,6 +21,16 @@ jobs:
           node-version: 20
       - name: Install dependencies
         run: npm install
+      - name: Check Merchant Studio JavaScript syntax
+        run: node --check merchant-studio/app.js
+      - name: Install Merchant Studio server dependencies
+        run: npm install --prefix merchant-studio/server
+      - name: Check Merchant Studio server syntax
+        run: node --check merchant-studio/server/server.mjs && node --check merchant-studio/server/vkt-proxy.mjs
+      - name: Test Merchant Studio API proxy
+        run: npm test --prefix merchant-studio/server
+      - name: Check deployment script syntax
+        run: node --check scripts/deploy.js && node --check scripts/preflight.js && node --check scripts/verify-deployment.js
       - name: Compile contracts
         run: npm run compile
       - name: Run tests
