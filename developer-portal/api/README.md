@@ -22,6 +22,10 @@ The server loads `.env` automatically. Never commit it. Startup rejects merchant
 
 Invoice creation rejects amounts above the fixed 1,000,000,000 VKT maximum supply. The verifier checks the RPC chain ID, deployed token bytecode, successful receipt, configured token contract, expected payer, exact Transfer recipient and amount, minimum confirmations, invoice status and transaction-hash reuse. It records the receipt block number/hash and rechecks canonical block identity when a paid invoice is verified again; if the recorded block was reorganized out, the invoice is returned to pending for reconciliation. Existing SQLite databases are migrated to add the block tracking columns. Public error responses intentionally omit raw RPC/database exception details.
 
+## Browser origin policy
+
+Set `CORS_ALLOWED_ORIGINS` to a comma-separated exact origin allowlist for browser-based merchant frontends (for example `https://merchant.example`). HTTPS is required; HTTP is accepted only for localhost development. Requests without an `Origin` header remain available for server-to-server clients. CORS does not replace merchant API authentication.
+
 ## SQLite backup
 
 Use a persistent disk and set both paths explicitly before running a backup:
