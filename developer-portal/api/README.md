@@ -16,9 +16,12 @@ The server loads `.env` automatically. Never commit it. Startup rejects merchant
 
 ## API
 
-- `GET /health` — process liveness only.\n- `GET /ready` — dependency readiness; checks SQLite access, BNB testnet chain ID 97, and configured token contract bytecode, returning HTTP 503 when a dependency is unavailable.
+- `GET /v1/config` — public BNB testnet chain ID, configured VKT token address, merchant address and token decimals; contains no secrets.
+- `GET /health` — process liveness only.
+- `GET /ready` — dependency readiness; checks SQLite access, BNB testnet chain ID 97, and configured token contract bytecode, returning HTTP 503 when a dependency is unavailable.
 - `POST /v1/invoices` — create an invoice; requires `Authorization: Bearer <MERCHANT_API_KEY>` and JSON `{"invoiceId":"order-123","amount":"5.25","payerAddress":"0xCUSTOMER_WALLET"}`.
-- `GET /v1/invoices/:invoiceId` — retrieve invoice amount, expected payer, status, transaction hash and creation time; requires the merchant bearer API key.\n- `POST /v1/payments/verify` — verify JSON `{"invoiceId":"order-123","transactionHash":"0x..."}`. This endpoint has a persistent service-wide limit of 120 requests per rolling minute by default; set `VERIFY_RATE_LIMIT_PER_MINUTE` to a positive integer to tune it. A limit response is HTTP 429 with `Retry-After`.
+- `GET /v1/invoices/:invoiceId` — retrieve invoice amount, expected payer, status, transaction hash and creation time; requires the merchant bearer API key.
+- `POST /v1/payments/verify` — verify JSON `{"invoiceId":"order-123","transactionHash":"0x..."}`. This endpoint has a persistent service-wide limit of 120 requests per rolling minute by default; set `VERIFY_RATE_LIMIT_PER_MINUTE` to a positive integer to tune it. A limit response is HTTP 429 with `Retry-After`.
 
 Invoice creation rejects amounts above the fixed 1,000,000,000 VKT maximum supply. The verifier checks the RPC chain ID, deployed token bytecode, successful receipt, configured token contract, expected payer, exact Transfer recipient and amount, minimum confirmations, invoice status and transaction-hash reuse. It records the receipt block number/hash and rechecks canonical block identity when a paid invoice is verified again; if the recorded block was reorganized out, the invoice is returned to pending for reconciliation. Existing SQLite databases are migrated to add the block tracking columns. Public error responses intentionally omit raw RPC/database exception details.
 
