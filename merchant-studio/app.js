@@ -1,5 +1,5 @@
 (() => {
-const $=id=>document.getElementById(id), CHAIN_ID="0x61";
+const $=id=>document.getElementById(id), CHAIN_ID="0x61", MIN_CONFIRMATIONS=3, MAX_INVOICE_VKT=1_000_000_000n;
 const CHAIN_PARAMS={chainId:CHAIN_ID,chainName:"BNB Smart Chain Testnet",nativeCurrency:{name:"tBNB",symbol:"tBNB",decimals:18},rpcUrls:["https://bsc-testnet-dataseed.bnbchain.org"],blockExplorerUrls:["https://testnet.bscscan.com/"]};
 const ABI=["function transfer(address to,uint256 value) returns (bool)","event Transfer(address indexed from,address indexed to,uint256 value)"];
 const TRANSFER_IFACE=new ethers.Interface(ABI);
@@ -33,20 +33,24 @@ async function verifyTransaction(){
   if(!receipt){out.textContent="Transaction not found yet. Check the hash and try again.";out.style.color="var(--danger)";return;}
   if(receipt.status!==1){out.textContent="Transaction reverted; payment is not confirmed.";out.style.color="var(--danger)";return;}
   const currentBlock=await readProvider.getBlockNumber();
-  if(currentBlock<receipt.blockNumber){out.textContent="Waiting for block confirmation.";return;}
+  const confirmations=currentBlock-receipt.blockNumber+1;
+  if(confirmations<MIN_CONFIRMATIONS){out.textContent="Found a matching receipt, but only "+confirmations+"/"+MIN_CONFIRMATIONS+" confirmations are available. Check again shortly.";return;}
+  const canonicalBlock=await readProvider.getBlock(receipt.blockNumber);
+  if(!canonicalBlock||canonicalBlock.hash.toLowerCase()!==receipt.blockHash.toLowerCase()){out.textContent="The receipt block is no longer canonical. Do not mark this invoice paid.";out.style.color="var(--danger)";return;}
   const expected=ethers.parseUnits(invoice.amount,18);
-  const matches=receipt.logs.some(log=>{
-   if(log.address.toLowerCase()!==invoice.token.toLowerCase())return false;
-   try{const parsed=TRANSFER_IFACE.parseLog(log);return parsed&&parsed.name==="Transfer"&&parsed.args.to.toLowerCase()===invoice.merchant.toLowerCase()&&parsed.args.value===expected;}catch{return false;}
+  const matchingLogs=receipt.logs.flatMap(log=>{
+   if(log.address.toLowerCase()!==invoice.token.toLowerCase())return [];
+   try{const parsed=TRANSFER_IFACE.parseLog(log);return parsed&&parsed.name==="Transfer"&&parsed.args.to.toLowerCase()===invoice.merchant.toLowerCase()&&parsed.args.value===expected?[parsed]:[];}catch{return [];}
   });
-  if(!matches){out.textContent="Not a matching VKT payment: token contract, recipient or amount does not match this invoice.";out.style.color="var(--danger)";return;}
-  out.textContent="Verified: matching VKT Transfer event in block "+receipt.blockNumber+". Tx: "+hash;
+  if(!matchingLogs.length){out.textContent="Not a matching VKT payment: token contract, recipient or amount does not match this invoice.";out.style.color="var(--danger)";return;}
+  const payer=matchingLogs[0].args.from;
+  out.textContent="Receipt verified: matching VKT Transfer event · payer "+fmtAddress(payer)+" · "+confirmations+" confirmations · block "+receipt.blockNumber+". Tx: "+hash;
  }catch(err){out.textContent="Could not verify right now: "+(err.shortMessage||err.message||"RPC error");out.style.color="var(--danger)";}
  finally{$("verifyBtn").disabled=false;}
 }
 
 async function payInvoice(){if(!invoice)return;try{$("payBtn").disabled=true;setStatus("Connecting wallet…");if(!signer)await connect();await ensureTestnet();const contract=new ethers.Contract(invoice.token,ABI,signer),value=ethers.parseUnits(invoice.amount,18);setStatus("Confirm the VKT transfer in your wallet. Check recipient and amount before signing.");const tx=await contract.transfer(invoice.merchant,value);setStatus("Transaction sent: "+tx.hash+". Waiting for one block confirmation…");const receipt=await tx.wait(1);if(!receipt||receipt.status!==1)throw Error("Transaction was not successful on-chain.");setStatus("Confirmed in block "+receipt.blockNumber+". Tx: "+tx.hash+" · Verify independently on testnet BscScan.");$("payBtn").textContent="Payment confirmed";}catch(err){setStatus(err.shortMessage||err.message||"Payment failed.",true);$("payBtn").disabled=false;}}
-$("invoiceForm").addEventListener("submit",e=>{e.preventDefault();$("formError").textContent="";const merchant=$("merchantWallet").value.trim(),token=$("tokenAddress").value.trim(),amount=$("amount").value.trim();if(!validAddress(merchant)||!validAddress(token)){$("formError").textContent="Enter valid merchant and token contract addresses.";return;}if(!/^(?:0|[1-9]\d*)(?:\.\d{1,18})?$/.test(amount)||Number(amount)<=0){$("formError").textContent="Enter a positive amount with up to 18 decimal places.";return;}showInvoice({merchant:ethers.getAddress(merchant),token:ethers.getAddress(token),amount,reference:$("reference").value.trim()});});
+$("invoiceForm").addEventListener("submit",e=>{e.preventDefault();$("formError").textContent="";const merchant=$("merchantWallet").value.trim(),token=$("tokenAddress").value.trim(),amount=$("amount").value.trim();if(!validAddress(merchant)||!validAddress(token)){$("formError").textContent="Enter valid merchant and token contract addresses.";return;}try{const units=ethers.parseUnits(amount,18);if(units<=0n||units>MAX_INVOICE_VKT*10n**18n)throw Error("Invoice amount must be greater than zero and no more than 1,000,000,000 VKT.");}catch(err){$("formError").textContent=err.message||"Invalid VKT amount.";return;}showInvoice({merchant:ethers.getAddress(merchant),token:ethers.getAddress(token),amount,reference:$("reference").value.trim()});});
 $("connectBtn").addEventListener("click",async()=>{try{await connect();}catch(err){$("walletState").textContent=err.message;}});
 $("clearHistory").addEventListener("click",()=>{localStorage.removeItem("vkt-invoices");history();});
 $("verifyBtn").addEventListener("click",verifyTransaction);
