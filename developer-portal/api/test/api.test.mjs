@@ -49,6 +49,7 @@ before(async () => {
       VKT_TOKEN_ADDRESS: tokenAddress,
       VKT_MERCHANT_ADDRESS: merchantAddress,
       MERCHANT_API_KEY: apiKey,
+      VERIFY_RATE_LIMIT_PER_MINUTE: "3",
       DATABASE_PATH: databasePath
     },
     stdio: "ignore"
@@ -247,4 +248,27 @@ test("oversized JSON receives a stable JSON client error", async () => {
   });
   assert.equal(response.status, 413);
   assert.deepEqual(await response.json(), { error: "Request body is too large." });
+});
+
+
+test("payment verification is rate-limited with a Retry-After header", async () => {
+  const responses = [];
+  for (let index = 0; index < 4; index += 1) {
+    responses.push(await fetch(`${baseUrl}/v1/payments/verify`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        invoiceId: "unknown-invoice",
+        transactionHash: `0x${String(index + 1).padStart(64, "0")}`
+      })
+    }));
+  }
+  assert.equal(responses[0].status, 404);
+  assert.equal(responses[1].status, 404);
+  assert.equal(responses[2].status, 404);
+  assert.equal(responses[3].status, 429);
+  assert.ok(Number(responses[3].headers.get("retry-after")) >= 1);
+  assert.deepEqual(await responses[3].json(), {
+    error: "Verification rate limit exceeded. Retry later."
+  });
 });
