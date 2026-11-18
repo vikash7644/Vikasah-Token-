@@ -1,5 +1,5 @@
-import { copyFile, rm } from "node:fs/promises";
-import { resolve } from "node:path";
+import { copyFile, mkdir, rm } from "node:fs/promises";
+import { dirname } from "node:path";
 import Database from "better-sqlite3";
 
 const [backupArgument, destinationArgument] = process.argv.slice(2);
@@ -34,6 +34,7 @@ validateDatabase(backupPath);
 let created = false;
 try {
   // COPYFILE_EXCL guarantees the restore never overwrites an existing database.
+  await mkdir(dirname(destinationPath), { recursive: true });
   await copyFile(backupPath, destinationPath, 1);
   created = true;
   validateDatabase(destinationPath);
