@@ -62,7 +62,7 @@ The proxy and server integration tests use a mocked upstream API; they cover rou
 
 - Testnet only. The VKT token and Utility Passport contract have not yet been deployed; no verified contract address is published.
 - No seed phrase or private key is requested or stored. Every transfer is approved by the user's wallet.
-- The API expects a payer address and binds it to the invoice before the transfer.
+- The API expects a payer address and binds it to the invoice before the transfer. The browser-facing status proxy strips the private payer address; a duplicate invoice ID is reused only when the server confirms the same pending payer and exact amount.
 - The app never marks a payment paid based only on a wallet popup or a transaction hash; the backend must confirm it.
 - A failed or delayed backend check may leave an on-chain transfer with an invoice still pending. The merchant must reconcile the transaction before fulfilling an order.
 - This is a single-merchant starter, not a multi-tenant payment processor. No webhook delivery, fiat conversion, refunds, merchant login, production monitoring or independent security audit is included.
