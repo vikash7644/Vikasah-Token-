@@ -103,7 +103,10 @@ test("invoice creation validates identifiers, payer and positive decimal amounts
     { invoiceId: "bad-payer", amount: "5.25", payerAddress: "not-an-address" },
     { invoiceId: "zero-amount", amount: "0", payerAddress },
     { invoiceId: "negative-amount", amount: "-1", payerAddress },
-    { invoiceId: "too-many-decimals", amount: "1.0000000000000000001", payerAddress }
+    { invoiceId: "too-many-decimals", amount: "1.0000000000000000001", payerAddress },
+    { invoiceId: "scientific-notation", amount: "1e3", payerAddress },
+    { invoiceId: "leading-zero", amount: "01", payerAddress },
+    { invoiceId: "whitespace-amount", amount: " 1", payerAddress }
   ];
 
   for (const body of invalidCases) {
