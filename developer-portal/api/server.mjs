@@ -73,8 +73,11 @@ app.post("/v1/invoices", (req, res) => {
     if (amountWei <= 0n) return res.status(400).json({ error: "amount must be greater than zero." });
     insertInvoice.run(invoiceId, amountWei.toString(), getAddress(payerAddress));
     return res.status(201).json({ invoiceId, amount, currency: "VKT", status: "pending" });
-  } catch {
-    return res.status(409).json({ error: "Invoice ID already exists." });
+  } catch (error) {
+    if (error.code === "SQLITE_CONSTRAINT_PRIMARYKEY" || error.code === "SQLITE_CONSTRAINT_UNIQUE") {
+      return res.status(409).json({ error: "Invoice ID already exists." });
+    }
+    return res.status(500).json({ error: "Could not create the invoice." });
   }
 });
 
@@ -142,7 +145,7 @@ app.post("/v1/payments/verify", async (req, res) => {
     if (error.code === "SQLITE_CONSTRAINT_UNIQUE") {
       return res.status(409).json({ error: "Transaction hash has already been assigned to an invoice." });
     }
-    return res.status(502).json({ error: "Could not verify the transaction.", detail: error.message });
+    return res.status(502).json({ error: "Could not verify the transaction. Retry later or contact the merchant." });
   }
 });
 
