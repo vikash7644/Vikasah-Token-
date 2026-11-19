@@ -31,6 +31,7 @@ contract VikasahToken is
     error ZeroAddress();
     error DuplicateAllocationWallets();
     error DuplicateAdminWallets();
+    error RenounceOwnershipDisabled();
 
     constructor(
         address initialOwner,
@@ -66,6 +67,11 @@ contract VikasahToken is
 
     function unpause() external onlyOwner {
         _unpause();
+    }
+
+    /// @dev Keep administrative recovery possible; use two-step transfer instead.
+    function renounceOwnership() public override onlyOwner {
+        revert RenounceOwnershipDisabled();
     }
 
     function _update(address from, address to, uint256 value)
