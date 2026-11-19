@@ -28,11 +28,11 @@
 
 ### P1 — Resolve before public marketing launch
 
-1. **Search/social metadata is minimal:** add a canonical URL, Open Graph and social-card metadata, favicon/app icons, and a deliberate robots/sitemap strategy after the final public URL is selected.
+1. **Partially addressed in follow-up commit:** Open Graph and Twitter summary metadata were added. A canonical URL, favicon/app icons, and deliberate robots/sitemap strategy still require the final public URL and brand assets.
 2. **No actual product photography:** current device render is CSS concept art. Keep the concept disclaimer prominent; replace with clearly labelled prototype photos only when a real prototype exists.
-3. **Accessibility needs a pass:** test keyboard navigation and visible focus states, screen-reader landmarks/table headers, contrast, 200% zoom, narrow mobile widths and reduced-motion preferences. Verify the comparison table does not force horizontal overflow on small screens.
+3. **Improvements added; testing still required:** skip-to-content link, visible keyboard focus, semantic comparison-table caption/column headers, horizontally scrollable comparison table on narrow screens, and reduced-motion handling were added. Still test keyboard navigation, screen readers, contrast, 200% zoom and real mobile browsers.
 4. **No operational contact path:** add a verified business contact/support route before marketing claims or customer commitments. Do not collect visitor data until privacy notice, consent, secure backend, retention and deletion process are ready.
-5. **Clarify the CTA:** “Early access” and “Get launch updates” currently lead to an on-page section whose only action is following GitHub. Consider labelling it “Follow development” until a real opt-in waitlist exists.
+5. **CTA clarified:** the page now labels the action as following project progress on GitHub and explicitly says there is no waitlist or signup form. Revisit only when a privacy-reviewed registration service exists.
 
 ### P2 — Recommended quality improvements
 
@@ -60,6 +60,7 @@
 - [ ] Legal/privacy/terms review completed
 - [ ] Waitlist backend and consent controls reviewed, if collecting data
 - [ ] CI checks green on the release commit
+- [ ] Canonical URL, favicon/app icons and final robots/sitemap configuration added
 - [ ] Public deployment, domain, HTTPS and mobile/accessibility checks verified
 
 **Current status:** Concept landing page only. No sales, payments, reservations or delivery commitments.
