@@ -1,0 +1,34 @@
+name: Vikasah Website QA
+
+on:
+  pull_request:
+    branches: [main, feat/vikasah-presale-site]
+    paths:
+      - "presale/**"
+      - ".github/workflows/presale-qa.yml"
+  push:
+    branches: [main]
+    paths:
+      - "presale/**"
+      - ".github/workflows/presale-qa.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  browser-and-accessibility:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install browser test tools
+        run: npm install --no-save --no-package-lock playwright @axe-core/playwright
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Run mobile, desktop and accessibility checks
+        run: node scripts/check-presale.mjs
