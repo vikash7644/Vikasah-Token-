@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#101522"><title>Vikasah Watch Wallet</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1020;--panel:#151d30;--muted:#9ba8bf;--text:#f5f7fb;--accent:#9ee6c2;--line:#29344b}*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 85% 0,#233b4b 0,transparent 34%),var(--bg);color:var(--text);font:15px/1.5 system-ui,sans-serif}.wrap{max-width:760px;margin:auto;padding:22px}.card{background:#151d30;border:1px solid var(--line);border-radius:18px;padding:22px;margin-top:18px}.brand{font-weight:800;font-size:22px}.muted{color:var(--muted)}h1{font-size:34px;line-height:1.15}label{display:block;margin:15px 0 6px;font-weight:650}input,select{width:100%;padding:13px;border:1px solid #40516d;border-radius:10px;background:#0d1526;color:white;font:inherit}button{padding:12px 18px;border:0;border-radius:10px;background:var(--accent);color:#102018;font-weight:750;margin-top:14px;cursor:pointer}button:disabled{opacity:.6}button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid white;outline-offset:2px}.result{font-size:30px;font-weight:800;margin:8px 0}.notice{background:#332b19;border:1px solid #7d6736;color:#ffe6a6;border-radius:10px;padding:12px}.status{min-height:26px;margin-top:12px;overflow-wrap:anywhere}.small{font-size:12px}.row{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}a{color:var(--accent)}@media(max-width:600px){.wrap{padding:15px}h1{font-size:29px}}
+</style></head><body><main class="wrap">
+<header class="row"><div class="brand">✦ VIKASAH</div><span class="muted small">WATCH-ONLY WALLET</span></header>
+<h1>Track your BNB address.</h1><p class="muted">Read-only balance lookup. No wallet connection, private key, seed phrase, or transaction signing.</p>
+<div class="notice"><strong>Safety:</strong> Enter only a public 0x address. Never enter a recovery phrase or private key. This page sends the public address to the selected public BNB RPC endpoint to request its balance.</div>
+<section class="card"><label for="network">Network</label><select id="network"><option value="56">BNB Smart Chain Mainnet</option><option value="97">BNB Smart Chain Testnet</option></select>
+<label for="address">Public wallet address</label><input id="address" type="text" inputmode="text" autocomplete="off" spellcheck="false" placeholder="0x..." maxlength="42" aria-describedby="help"><div id="help" class="muted small">Must be exactly 42 characters and start with 0x.</div>
+<button id="check" type="button">Check BNB balance</button><div id="status" class="status" role="status" aria-live="polite"></div>
+<div class="card" style="margin-top:15px;background:#101827"><div class="muted">BNB balance</div><div id="balance" class="result">— BNB</div><div id="chain" class="muted small">No address checked yet</div></div></section>
+<p class="muted small">This tool reads native BNB only. It does not display VKT or other tokens and does not prove ownership of the address. RPC availability and browser CORS policy may vary.</p>
+<footer class="muted small" style="padding:20px 0">Vikasah · Read-only preview · No funds are held or moved.</footer>
+</main>
+<script>
+const endpoints={56:"https://bsc-dataseed.binance.org/",97:"https://bsc-testnet-dataseed.bnbchain.org/"};
+const $=id=>document.getElementById(id);
+function formatWei(hex){const wei=BigInt(hex);const whole=wei/10n**18n;const fraction=(wei%10n**18n).toString().padStart(18,"0").slice(0,8);return whole.toString()+"."+fraction;}
+$("check").addEventListener("click",async()=>{
+ const address=$("address").value.trim();const chainId=Number($("network").value);
+ if(!/^0x[a-fA-F0-9]{40}$/.test(address)){ $("status").textContent="Enter a valid public 0x address."; $("balance").textContent="— BNB"; return; }
+ const button=$("check");button.disabled=true;$("status").textContent="Requesting read-only balance…";$("balance").textContent="— BNB";
+ try{
+  const response=await fetch(endpoints[chainId],{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({jsonrpc:"2.0",id:1,method:"eth_getBalance",params:[address,"latest"]})});
+  if(!response.ok)throw new Error("RPC HTTP "+response.status);
+  const data=await response.json();if(data.error||typeof data.result!=="string")throw new Error(data.error?.message||"Invalid RPC response");
+  $("balance").textContent=formatWei(data.result)+" BNB";$("chain").textContent=chainId===56?"BNB Smart Chain Mainnet · Chain ID 56":"BNB Smart Chain Testnet · Chain ID 97";$("status").textContent="Balance updated. Read-only request; no transaction was sent.";
+ }catch(error){$("status").textContent="Could not load balance: "+(error?.message||"network error")+". Try again later."; $("chain").textContent="Balance unavailable";}
+ finally{button.disabled=false;}
+});
+</script></body></html>
