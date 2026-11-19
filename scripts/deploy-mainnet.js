@@ -2,6 +2,7 @@ const hre = require("hardhat");
 
 const EXPECTED_MAINNET_CHAIN_ID = 56n;
 const REQUIRED_CONFIRMATION = "I_HAVE_VERIFIED_VKT_MAINNET_DEPLOYMENT";
+const GAS_LIMIT_BUFFER_PERCENT = 20n;
 
 function requireAddress(label, value) {
   if (!value || !hre.ethers.isAddress(value) || value === hre.ethers.ZeroAddress) {
@@ -17,7 +18,8 @@ async function main() {
     );
   }
 
-  const network = await hre.ethers.provider.getNetwork();
+  const provider = hre.ethers.provider;
+  const network = await provider.getNetwork();
   if (network.chainId !== EXPECTED_MAINNET_CHAIN_ID) {
     throw new Error(
       `Refusing deployment: expected BNB Smart Chain Mainnet (chain ID 56), received chain ID ${network.chainId}.`
@@ -27,6 +29,7 @@ async function main() {
   const [deployer] = await hre.ethers.getSigners();
   if (!deployer) throw new Error("No deployer configured. Use a secure local signer; never commit its key.");
 
+  const deployerAddress = hre.ethers.getAddress(deployer.address);
   const owner = requireAddress("TOKEN_ADMIN_OWNER", process.env.TOKEN_ADMIN_OWNER);
   const ownerAllocationReceiver = requireAddress(
     "OWNER_ALLOCATION_RECEIVER",
@@ -43,18 +46,65 @@ async function main() {
   if (owner === ownerAllocationReceiver || owner === distributionReceiver) {
     throw new Error("Use a separately controlled admin owner, preferably a multisig.");
   }
+  if (
+    deployerAddress === owner ||
+    deployerAddress === ownerAllocationReceiver ||
+    deployerAddress === distributionReceiver
+  ) {
+    throw new Error("Use a dedicated deployer wallet separate from all three token role wallets.");
+  }
 
-  const balance = await hre.ethers.provider.getBalance(deployer.address);
+  const Token = await hre.ethers.getContractFactory("VikasahToken");
+  const deploymentRequest = await Token.getDeployTransaction(
+    owner,
+    ownerAllocationReceiver,
+    distributionReceiver
+  );
+  const estimatedGas = await provider.estimateGas({
+    ...deploymentRequest,
+    from: deployerAddress
+  });
+  const gasLimit = (estimatedGas * (100n + GAS_LIMIT_BUFFER_PERCENT) + 99n) / 100n;
+
+  const feeData = await provider.getFeeData();
+  const deploymentOverrides = { gasLimit };
+  let maximumFeePerGas;
+  if (feeData.maxFeePerGas != null && feeData.maxPriorityFeePerGas != null) {
+    deploymentOverrides.maxFeePerGas = feeData.maxFeePerGas;
+    deploymentOverrides.maxPriorityFeePerGas = feeData.maxPriorityFeePerGas;
+    maximumFeePerGas = feeData.maxFeePerGas;
+  } else if (feeData.gasPrice != null) {
+    deploymentOverrides.gasPrice = feeData.gasPrice;
+    maximumFeePerGas = feeData.gasPrice;
+  } else {
+    throw new Error("RPC did not provide usable gas fee data; refusing to broadcast.");
+  }
+
+  const maximumEstimatedCost = gasLimit * maximumFeePerGas;
+  const balance = await provider.getBalance(deployerAddress);
   console.log("NETWORK: BNB Smart Chain MAINNET (56)");
-  console.log("Deployer:", deployer.address);
+  console.log("Deployer:", deployerAddress);
   console.log("Deployer BNB balance:", hre.ethers.formatEther(balance));
   console.log("Admin owner:", owner);
   console.log("30% allocation receiver:", ownerAllocationReceiver);
   console.log("70% reserve receiver:", distributionReceiver);
-  console.log("Review the above values and expected gas before signing.");
+  console.log("Estimated gas:", estimatedGas.toString());
+  console.log("Gas limit with 20% buffer:", gasLimit.toString());
+  console.log("Maximum estimated deployment fee (BNB):", hre.ethers.formatEther(maximumEstimatedCost));
 
-  const Token = await hre.ethers.getContractFactory("VikasahToken");
-  const token = await Token.deploy(owner, ownerAllocationReceiver, distributionReceiver);
+  if (balance < maximumEstimatedCost) {
+    throw new Error(
+      `Insufficient deployer BNB balance. Need at least ${hre.ethers.formatEther(maximumEstimatedCost)} BNB at the quoted fee cap; no transaction was sent.`
+    );
+  }
+
+  console.log("Preflight passed. Review the addresses and fee cap before signing.");
+  const token = await Token.deploy(
+    owner,
+    ownerAllocationReceiver,
+    distributionReceiver,
+    deploymentOverrides
+  );
   await token.waitForDeployment();
 
   const address = await token.getAddress();
