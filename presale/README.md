@@ -43,3 +43,9 @@ node scripts/check-presale.mjs
 ```
 
 A passing automated scan is not a substitute for manual screen-reader, real-device, zoom, keyboard and human contrast testing.
+
+## Hardware security validation plan
+
+The engineering test plan is maintained in [`hardware/SECURITY_FIRMWARE_VALIDATION_PLAN.md`](../hardware/SECURITY_FIRMWARE_VALIDATION_PLAN.md). It covers the threat model, secure-element and key-isolation decisions, trusted transaction confirmation, secure boot and firmware updates, PIN/recovery behavior, protocol/parser testing, independent assessment and release gates.
+
+This is a plan only. It does not mean a physical prototype exists or that any security test, certification or independent audit has passed.
