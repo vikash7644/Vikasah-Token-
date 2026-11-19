@@ -134,4 +134,9 @@ describe("VikasahToken", function () {
     await expect(Token.deploy(allocation.address, allocation.address, reserve.address)).to.be.reverted;
     await expect(Token.deploy(reserve.address, allocation.address, reserve.address)).to.be.reverted;
   });
+  it("prevents accidental ownership renunciation", async function () {
+    const { token, owner } = await deployToken();
+    await expect(token.connect(owner).renounceOwnership()).to.be.reverted;
+    expect(await token.owner()).to.equal(owner.address);
+  });
 });
