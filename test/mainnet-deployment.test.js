@@ -63,4 +63,11 @@ describe("VKT mainnet deployment preflight", function () {
     expect(() => assertSufficientBalance(599n, 600n)).to.throw("no transaction was sent");
     expect(() => assertSufficientBalance(600n, 600n)).not.to.throw();
   });
+
+  it("rejects invalid balance and non-positive fee bounds", async function () {
+    expect(() => assertSufficientBalance(-1n, 600n)).to.throw("Invalid deployer balance");
+    expect(() => assertSufficientBalance(1000n, 0n)).to.throw("Invalid deployer balance");
+    expect(() => assertSufficientBalance(1000n, -1n)).to.throw("Invalid deployer balance");
+    expect(() => assertSufficientBalance(1000n, "600")).to.throw("Invalid deployer balance");
+  });
 });
