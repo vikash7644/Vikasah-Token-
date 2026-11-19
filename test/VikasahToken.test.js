@@ -53,7 +53,6 @@ describe("VikasahToken", function () {
     expect(await token.owner()).to.equal(alice.address);
   });
 
-
   it("supports EIP-2612 permit approvals", async function () {
     const { token, ownerAllocation, alice } = await deployToken();
     const network = await ethers.provider.getNetwork();
@@ -102,11 +101,9 @@ describe("VikasahToken", function () {
     expect(await token.allowance(reserve.address, outsider.address)).to.equal(0n);
   });
 
-
   it("keeps the owner allocation separate when the distribution reserve is used", async function () {
     const { token, ownerAllocation, reserve, alice, outsider } = await deployToken();
     const ownerReserveBefore = await token.balanceOf(ownerAllocation.address);
-
     await token.connect(reserve).transfer(alice.address, ethers.parseEther("1000"));
     expect(await token.balanceOf(ownerAllocation.address)).to.equal(ownerReserveBefore);
     await expect(
@@ -129,5 +126,17 @@ describe("VikasahToken", function () {
     await expect(Token.deploy(owner.address, ethers.ZeroAddress, wallet.address)).to.be.reverted;
     await expect(Token.deploy(owner.address, wallet.address, ethers.ZeroAddress)).to.be.reverted;
     await expect(Token.deploy(owner.address, wallet.address, wallet.address)).to.be.reverted;
+  });
+
+  it("requires the admin owner to be separate from both allocation wallets", async function () {
+    const Token = await ethers.getContractFactory("VikasahToken");
+    const [owner, allocation, reserve] = await ethers.getSigners();
+    await expect(Token.deploy(allocation.address, allocation.address, reserve.address)).to.be.reverted;
+    await expect(Token.deploy(reserve.address, allocation.address, reserve.address)).to.be.reverted;
+  });
+  it("prevents accidental ownership renunciation", async function () {
+    const { token, owner } = await deployToken();
+    await expect(token.connect(owner).renounceOwnership()).to.be.reverted;
+    expect(await token.owner()).to.equal(owner.address);
   });
 });

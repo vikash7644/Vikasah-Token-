@@ -47,7 +47,7 @@ npm test
 - RPC: https://bsc-testnet-dataseed.bnbchain.org
 - Explorer: https://testnet.bscscan.com/
 
-## Security and launch status
+## Reserve distribution planning\n\nThe 70% reserve allocation has no approved sub-allocation or vesting schedule yet. Complete and approve the [reserve distribution worksheet](docs/RESERVE-DISTRIBUTION-PLAN.md) before making distribution or lockup claims.\n\n## Security and launch status
 
 This is a development/testnet starting point, not an audited or production-ready token. CI compilation and tests must pass before testnet deployment. Obtain an independent smart-contract audit, verify deployed source, confirm distribution/vesting wallets, and complete legal and operational reviews before mainnet launch. Testnet tokens have no monetary value. Token creation or exchange listing does not guarantee buyers, price appreciation, or profit.
 
