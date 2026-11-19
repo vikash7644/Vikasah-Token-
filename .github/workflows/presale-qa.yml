@@ -2,7 +2,7 @@ name: Vikasah Website QA
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, feat/vikasah-presale-site]
     paths:
       - "presale/**"
       - ".github/workflows/presale-qa.yml"
