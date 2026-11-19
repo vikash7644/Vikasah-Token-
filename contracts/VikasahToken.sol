@@ -30,6 +30,7 @@ contract VikasahToken is
 
     error ZeroAddress();
     error DuplicateAllocationWallets();
+    error DuplicateAdminWallets();
 
     constructor(
         address initialOwner,
@@ -50,6 +51,10 @@ contract VikasahToken is
         if (ownerAllocationReceiver == distributionReceiver) {
             revert DuplicateAllocationWallets();
         }
+        if (
+            initialOwner == ownerAllocationReceiver ||
+            initialOwner == distributionReceiver
+        ) revert DuplicateAdminWallets();
 
         _mint(ownerAllocationReceiver, OWNER_ALLOCATION);
         _mint(distributionReceiver, DISTRIBUTION_RESERVE);
