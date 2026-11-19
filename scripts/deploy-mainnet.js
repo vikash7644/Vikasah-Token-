@@ -63,7 +63,15 @@ function createFeePlan(estimatedGas, feeData) {
 }
 
 function assertSufficientBalance(balance, maximumEstimatedCost) {
-  if (typeof balance !== "bigint" || balance < maximumEstimatedCost) {
+  if (
+    typeof balance !== "bigint" ||
+    typeof maximumEstimatedCost !== "bigint" ||
+    balance < 0n ||
+    maximumEstimatedCost <= 0n
+  ) {
+    throw new Error("Invalid deployer balance or maximum deployment cost; refusing to broadcast.");
+  }
+  if (balance < maximumEstimatedCost) {
     throw new Error(
       `Insufficient deployer BNB balance. Need at least ${hre.ethers.formatEther(maximumEstimatedCost)} BNB at the quoted fee cap; no transaction was sent.`
     );
