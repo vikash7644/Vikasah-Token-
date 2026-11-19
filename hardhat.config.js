@@ -9,11 +9,17 @@ if (process.env.BSC_TESTNET_RPC_URL && process.env.DEPLOYER_PRIVATE_KEY) {
     accounts: [process.env.DEPLOYER_PRIVATE_KEY]
   };
 }
+if (process.env.BSC_MAINNET_RPC_URL && process.env.DEPLOYER_PRIVATE_KEY) {
+  networks.bscMainnet = {
+    url: process.env.BSC_MAINNET_RPC_URL,
+    chainId: 56,
+    accounts: [process.env.DEPLOYER_PRIVATE_KEY]
+  };
+}
 
 module.exports = {
   solidity: {
-    // OpenZeppelin 5.x uses the MCOPY opcode in Bytes.sol; Solidity 0.8.25+
-    // is required to compile that source. Cancun is supported by BSC.
+    // OpenZeppelin 5.x uses MCOPY; Solidity 0.8.26 and Cancun are required.
     version: "0.8.26",
     settings: {
       optimizer: { enabled: true, runs: 200 },
