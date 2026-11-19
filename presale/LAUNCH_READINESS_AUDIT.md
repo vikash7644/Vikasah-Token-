@@ -41,6 +41,11 @@
 - Add a content review checklist so provisional prices/specifications cannot be mistaken for final purchase terms.
 - Configure HTTPS, custom domain, security headers and a deployment preview before publishing; verify the actual live URL after deployment.
 
+## Hardware security planning update
+
+- Added `hardware/SECURITY_FIRMWARE_VALIDATION_PLAN.md` with threat model, trust boundaries, hardware/firmware test matrix, transaction-review requirements, evidence recording, independent assessment and release gates.
+- This is an engineering plan only. It does not establish that a physical prototype exists or that any listed test, certification or independent assessment has passed.
+
 ## CI and publication evidence
 
 - PR #7 is open, draft and unmerged at the time of this audit.
