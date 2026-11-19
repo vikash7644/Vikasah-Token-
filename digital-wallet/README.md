@@ -7,7 +7,8 @@ A self-custody digital wallet workstream, separate from the physical Standard/Pr
 This branch adds a static responsive product preview only. It is **not** a functioning wallet:
 - no seed generation or import
 - no private-key storage
-- no RPC connection or balance fetching
+- no seed generation/import, private-key storage, or transaction signing
+- the separate `watch.html` page performs read-only native BNB balance lookups for a public address
 - no signing, sending, swapping, bridge, or WalletConnect
 - no analytics, signup, or payment collection
 
@@ -37,7 +38,7 @@ Never paste a seed phrase or private key into this preview.
 - [x] Static product preview
 - [ ] Architecture and threat model approved
 - [ ] Secure wallet core with synthetic test vectors
-- [ ] Read-only BSC testnet/mainnet balance view
+- [x] Read-only native BNB balance lookup (public address only; RPC/CORS dependent)
 - [ ] Testnet receive/send and signature verification
 - [ ] Android device security testing and independent audit
 - [ ] Mainnet release approval
